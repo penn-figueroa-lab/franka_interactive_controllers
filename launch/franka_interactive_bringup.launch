@@ -29,7 +29,7 @@
 
     <!-- Start only if passive_ds_impedance_controller is set in "controller"-->
     <include file="$(find franka_interactive_controllers)/launch/passiveDS_impedance_controller.launch" if="$(eval arg('controller') == 'passiveDS_impedance')">
-      <arg name="params_yaml_file" value="$(find mit_museum_inspection_demo)/config/museum_passiveDS_impedance_control_additional_params.yaml"/>
+      <arg name="params_yaml_file" value="$(find franka_interactive_controllers)/config/passiveDS_impedance_control_additional_params.yaml"/>
     </include>
   </group>
 

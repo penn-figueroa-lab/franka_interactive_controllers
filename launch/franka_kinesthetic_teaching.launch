@@ -3,10 +3,10 @@
   <arg name="robot_ip"                   default="172.16.0.2"/>
   <arg name="load_gripper"               default="false" />
   <arg name="use_gripper_gui"            default="false" />
-  <arg name="load_franka_control"        default="false" />
+  <arg name="load_franka_control"        default="true" />
   <arg name="load_kinesthetic_teaching"  default="true" />
 
-  <arg name="path_save_rosbag"           default="/home/nadiafig/recordings/farhad-demos/bags/"/>
+  <arg name="path_save_rosbag"           default="<some_save_links>"/>
   <arg name="topics_rosbag"       
     default="/tf 
     /franka_state_controller/joint_states 
@@ -28,7 +28,7 @@
 
     <!-- Load desired controller-->  
     <rosparam command="load" file="$(find franka_interactive_controllers)/config/impedance_control_additional_params.yaml"/>
-    <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="joint_gravity_compensation_controller"/>
+    <node name="controller_spawner_gravity" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="joint_gravity_compensation_controller"/>
 
   </group>
 

@@ -3,7 +3,7 @@
 
   <!-- Gazebo & GUI Configuration -->
   <arg name="gazebo"      default="true"  doc="Should the gazebo simulation be launched? Use false in case if you want to include this file and launch gazebo yourself" />
-  <arg name="headless"    default="true" doc="Should the gazebo GUI be launched?" />
+  <arg name="headless"    default="false" doc="Should the gazebo GUI be launched?" />
   <arg name="paused"      default="false" doc="Should the simulation directly be stopped at 0s?" />
   <arg name="world"       default="worlds/empty.world" doc="Filename to a SDF World for gazebo to use" />
   <arg name="rviz"        default="true" doc="Should RVIz be launched?" />
@@ -41,7 +41,7 @@
   </include>
 
   <param name="robot_description"
-         command="xacro $(find franka_description)/robots/panda_arm.urdf.xacro
+         command="$(find xacro)/xacro $(find franka_description)/robots/panda/panda.urdf.xacro
                   gazebo:=true
                   hand:=$(arg use_gripper)
                   arm_id:=$(arg arm_id)
@@ -78,7 +78,7 @@
         type="spawner"
         name="$(arg arm_id)_controller_spawner"
         respawn="false" output="screen"
-        args="--wait-for initialized franka_state_controller $(arg controller)"
+        args="--wait-for initialized franka_state_controller"
   />
   <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
   <node name="joint_state_publisher" type="joint_state_publisher" pkg="joint_state_publisher">

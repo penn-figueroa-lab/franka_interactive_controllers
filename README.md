@@ -133,6 +133,12 @@ This launch file will load a ``cartesian impedance controller`` that:
 *To fill...* 
 
 
+### Use in Gazebo
+```bash
+roslaunch franka_interactive_controllers simulate_panda_gazebo.launch controller:=<controller_name>
+```
+This launch file will start Gazebo and rviz. The corrsponding controller will be launched and take the input descirbed in the above sections. It is important to pay attention to the rviz reconfiguration window. Refresh it to see the configurable values (stiffness, etc.)
+
 ---
 ## Contact
 Maintainer: [Nadia Figueroa](https://nbfigueroa.github.io/) (nadiafig @ seas dot upenn edu)  

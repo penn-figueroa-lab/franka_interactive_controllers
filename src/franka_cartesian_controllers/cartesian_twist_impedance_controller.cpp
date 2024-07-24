@@ -23,8 +23,12 @@ bool CartesianTwistImpedanceController::init(hardware_interface::RobotHW* robot_
   std::vector<double> cartesian_stiffness_vector;
   std::vector<double> cartesian_damping_vector;
 
-  sub_desired_twist_ = node_handle.subscribe(
-      "/cartesian_impedance_controller/desired_twist", 20, &CartesianTwistImpedanceController::desiredTwistCallback, this,
+  // sub_desired_twist_ = node_handle.subscribe(
+  //     "/cartesian_impedance_controller/desired_twist", 20, &CartesianTwistImpedanceController::desiredTwistCallback, this,
+  //     ros::TransportHints().reliable().tcpNoDelay());
+
+  sub_desired_joint_vel = node_handle.subscribe(
+      "/qpik_command", 20, &CartesianTwistImpedanceController::desiredJointVelCallback, this,
       ros::TransportHints().reliable().tcpNoDelay());
 
   // Getting ROSParams
@@ -108,6 +112,9 @@ bool CartesianTwistImpedanceController::init(hardware_interface::RobotHW* robot_
   position_d_target_.setZero();
   orientation_d_target_.coeffs() << 0.0, 0.0, 0.0, 1.0;
   velocity_d_.setZero();
+
+  dqd.resize(7);
+  dqd << 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0;
 
   cartesian_stiffness_.setZero();
   cartesian_damping_.setZero();
@@ -209,6 +216,132 @@ void CartesianTwistImpedanceController::starting(const ros::Time& /*time*/) {
 
 }
 
+
+// void CartesianTwistImpedanceController::update(const ros::Time& /*time*/,
+//                                                  const ros::Duration& period) {
+//   // get state variables
+//   franka::RobotState robot_state = state_handle_->getRobotState();
+//   std::array<double, 7> coriolis_array = model_handle_->getCoriolis();
+//   std::array<double, 42> jacobian_array =
+//       model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
+//   std::array<double, 7> gravity_array = model_handle_->getGravity();
+
+//   // convert to Eigen
+//   Eigen::Map<Eigen::Matrix<double, 7, 1>> coriolis(coriolis_array.data());
+//   Eigen::Map<Eigen::Matrix<double, 7, 1>> gravity(gravity_array.data());
+//   Eigen::Map<Eigen::Matrix<double, 6, 7>> jacobian(jacobian_array.data());
+//   Eigen::Map<Eigen::Matrix<double, 7, 1>> q(robot_state.q.data());
+//   Eigen::Map<Eigen::Matrix<double, 7, 1>> dq(robot_state.dq.data());
+//   Eigen::Map<Eigen::Matrix<double, 7, 1>> tau_J_d(  // NOLINT (readability-identifier-naming)
+//       robot_state.tau_J_d.data());
+//   Eigen::Affine3d transform(Eigen::Matrix4d::Map(robot_state.O_T_EE.data()));
+//   Eigen::Vector3d position(transform.translation());
+//   Eigen::Quaterniond orientation(transform.linear());
+
+//   // Current and Desired EE velocity
+//   Eigen::Matrix<double, 6, 1> velocity;
+//   Eigen::Matrix<double, 6, 1> velocity_desired_;
+//   velocity << jacobian * dq;
+//   velocity_desired_.setZero();
+//   velocity_desired_.head(3) << velocity_d_;
+
+//   // Check velocity command
+//   elapsed_time += period;
+//   if(ros::Time::now().toSec() - last_cmd_time > vel_cmd_timeout){
+//     velocity_d_.setZero();
+//   }
+
+//   //////////////////////////////////////////////////////////////////////////////////////////////////
+//   //////////////////////              COMPUTING TASK CONTROL TORQUE           //////////////////////
+//   //////////////////////////////////////////////////////////////////////////////////////////////////
+
+//   // compute control
+//   // allocate variables
+//   Eigen::VectorXd tau_task(7), tau_nullspace(7), tau_d(7), tau_tool(7);
+
+//   //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++//
+//   //++++++++++++++ CLASSICAL IMPEDANCE CONTROL FOR CARTESIAN COMMAND ++++++++++++++//
+//   //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++//
+
+//   // Compute task-space errors
+//   Eigen::Matrix<double, 6, 1> pose_error;
+//   pose_error.setZero();
+
+//   // --- Pose Error  --- //     
+//   pose_error.head(3) << position - position_d_;
+
+//   // orientation error
+//   if (orientation_d_.coeffs().dot(orientation.coeffs()) < 0.0) {
+//     orientation.coeffs() << -orientation.coeffs();
+//   }
+//   // "difference" quaternion
+//   Eigen::Quaterniond error_quaternion(orientation.inverse() * orientation_d_);
+//   pose_error.tail(3) << error_quaternion.x(), error_quaternion.y(), error_quaternion.z();
+//   // Transform to base frame
+//   pose_error.tail(3) << -transform.linear() * pose_error.tail(3);
+
+//   // Computing control torque from cartesian pose error from integrated velocity command
+//   Eigen::VectorXd     F_ee_des_;
+//   F_ee_des_.resize(6);
+//   F_ee_des_ << -cartesian_stiffness_ * pose_error - cartesian_damping_ * velocity;
+//   tau_task << jacobian.transpose() * F_ee_des_;
+
+
+//   ROS_WARN_STREAM_THROTTLE(0.5, "Cartesian Linear Stiffness:"     << cartesian_stiffness_(0,0));
+//   ROS_WARN_STREAM_THROTTLE(0.5, "Cartesian Linear Damping:"     << cartesian_damping_(0,0));
+//   ROS_WARN_STREAM_THROTTLE(0.5, "Desired Velocity Norm:"          << velocity_d_.norm());
+//   ROS_WARN_STREAM_THROTTLE(0.5, "Current Velocity Norm:"          << velocity.head(3).norm());
+//   ROS_WARN_STREAM_THROTTLE(0.5, "Classic Linear Control Force:"   << F_ee_des_.head(3).norm());
+//   ROS_WARN_STREAM_THROTTLE(0.5, "Classic Angular Control Force :" << F_ee_des_.tail(3).norm());
+//   //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++//
+//   //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++//
+
+
+//   //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++//
+//   //++++++++++++++ ADDITIONAL CONTROL TORQUES (NULLSPACE AND TOOL COMPENSATION) ++++++++++++++//
+//   //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++//
+
+//   // pseudoinverse for nullspace handling
+//   // kinematic pseudoinverse
+//   Eigen::MatrixXd jacobian_transpose_pinv;
+//   pseudoInverse(jacobian.transpose(), jacobian_transpose_pinv);
+
+//   // nullspace PD control with damping ratio = 1
+//   ROS_WARN_STREAM_THROTTLE(0.5, "Nullspace stiffness:" << nullspace_stiffness_);
+//   tau_nullspace << (Eigen::MatrixXd::Identity(7, 7) -
+//                     jacobian.transpose() * jacobian_transpose_pinv) *
+//                        (nullspace_stiffness_ * (q_d_nullspace_ - q) -
+//                         (2.0 * sqrt(nullspace_stiffness_)) * dq);
+//   // ROS_WARN_STREAM_THROTTLE(0.5, "Nullspace torques:" << tau_nullspace.transpose()); 
+
+//   // Compute tool compensation (scoop/camera in scooping task)
+//   if (activate_tool_compensation_)
+//     tau_tool << jacobian.transpose() * tool_compensation_force_;
+//   else
+//     tau_tool.setZero();
+
+//   // FINAL DESIRED CONTROL TORQUE SENT TO ROBOT
+//   tau_d << tau_task + tau_nullspace + coriolis - tau_tool;
+//   // ROS_WARN_STREAM_THROTTLE(0.5, "Desired control torque:" << tau_d.transpose());
+
+//   // Saturate torque rate to avoid discontinuities
+//   tau_d << saturateTorqueRate(tau_d, tau_J_d);
+//   for (size_t i = 0; i < 7; ++i) {
+//     joint_handles_[i].setCommand(tau_d(i));
+//   }
+
+//   //////////////////////////////////////////////////////////////////////////////////////////////////
+//   //////////////////////////////////////////////////////////////////////////////////////////////////
+
+//   // update parameters changed online either through dynamic reconfigure or through the interactive
+//   // target by filtering
+//   cartesian_stiffness_ = cartesian_stiffness_target_ ;
+//   cartesian_damping_   = cartesian_damping_target_;
+//   nullspace_stiffness_  = nullspace_stiffness_target_;
+//   position_d_ = filter_params_ * position_d_target_ + (1.0 - filter_params_) * position_d_;
+//   orientation_d_ = orientation_d_.slerp(filter_params_, orientation_d_target_);
+// }
+
 void CartesianTwistImpedanceController::update(const ros::Time& /*time*/,
                                                  const ros::Duration& period) {
   // get state variables
@@ -230,18 +363,23 @@ void CartesianTwistImpedanceController::update(const ros::Time& /*time*/,
   Eigen::Vector3d position(transform.translation());
   Eigen::Quaterniond orientation(transform.linear());
 
-  // Current and Desired EE velocity
-  Eigen::Matrix<double, 6, 1> velocity;
-  Eigen::Matrix<double, 6, 1> velocity_desired_;
-  velocity << jacobian * dq;
-  velocity_desired_.setZero();
-  velocity_desired_.head(3) << velocity_d_;
+  // std::cout << jacobian << std::endl;
+  // std::cout << " " << std::endl;
 
   // Check velocity command
   elapsed_time += period;
   if(ros::Time::now().toSec() - last_cmd_time > vel_cmd_timeout){
     velocity_d_.setZero();
   }
+
+
+  // ros::Duration time_max(8.0);
+  // double omega_max = 0.1;
+  // double cycle = std::floor(
+  //     std::pow(-1.0, (elapsed_time.toSec() - std::fmod(elapsed_time.toSec(), time_max.toSec())) /
+  //                        time_max.toSec()));
+  // double omega = cycle * omega_max / 2.0 *
+  //                (1.0 - std::cos(2.0 * M_PI / time_max.toSec() * elapsed_time.toSec()));
 
   //////////////////////////////////////////////////////////////////////////////////////////////////
   //////////////////////              COMPUTING TASK CONTROL TORQUE           //////////////////////
@@ -255,37 +393,25 @@ void CartesianTwistImpedanceController::update(const ros::Time& /*time*/,
   //++++++++++++++ CLASSICAL IMPEDANCE CONTROL FOR CARTESIAN COMMAND ++++++++++++++//
   //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++//
 
-  // Compute task-space errors
-  Eigen::Matrix<double, 6, 1> pose_error;
-  pose_error.setZero();
-
-  // --- Pose Error  --- //     
-  pose_error.head(3) << position - position_d_;
-
-  // orientation error
-  if (orientation_d_.coeffs().dot(orientation.coeffs()) < 0.0) {
-    orientation.coeffs() << -orientation.coeffs();
-  }
-  // "difference" quaternion
-  Eigen::Quaterniond error_quaternion(orientation.inverse() * orientation_d_);
-  pose_error.tail(3) << error_quaternion.x(), error_quaternion.y(), error_quaternion.z();
-  // Transform to base frame
-  pose_error.tail(3) << -transform.linear() * pose_error.tail(3);
-
-  // Computing control torque from cartesian pose error from integrated velocity command
-  Eigen::VectorXd     F_ee_des_;
-  F_ee_des_.resize(6);
-  F_ee_des_ << -cartesian_stiffness_ * pose_error - cartesian_damping_ * velocity;
-  tau_task << jacobian.transpose() * F_ee_des_;
+  // Eigen::VectorXd dqd(7);
+  // dqd << omega, omega, omega, omega, omega, omega, omega;
 
 
-  ROS_WARN_STREAM_THROTTLE(0.5, "Cartesian Linear Stiffness:"     << cartesian_stiffness_(0,0));
-  ROS_WARN_STREAM_THROTTLE(0.5, "Cartesian Linear Damping:"     << cartesian_damping_(0,0));
-  ROS_WARN_STREAM_THROTTLE(0.5, "Desired Velocity Norm:"          << velocity_d_.norm());
-  ROS_WARN_STREAM_THROTTLE(0.5, "Current Velocity Norm:"          << velocity.head(3).norm());
-  ROS_WARN_STREAM_THROTTLE(0.5, "Classic Linear Control Force:"   << F_ee_des_.head(3).norm());
-  ROS_WARN_STREAM_THROTTLE(0.5, "Classic Angular Control Force :" << F_ee_des_.tail(3).norm());
-  //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++//
+
+  Eigen::VectorXd damping(7);
+  damping << -5, -5, -5, -5, -5, -5, -5;
+  tau_task << damping.array() * (dq - dqd).array();
+  // std::cout << tau_task << std::endl;
+
+  // ROS_WARN_STREAM_THROTTLE(0.5, "Current Commanded Tau Task:"     << tau_task.transpose());
+  // ROS_WARN_STREAM_THROTTLE(0.5, "dq Difference:"     << (dqd).transpose());
+
+  // ROS_WARN_STREAM_THROTTLE(0.5, "Cartesian Linear Damping:"     << cartesian_damping_(0,0));
+  // ROS_WARN_STREAM_THROTTLE(0.5, "Desired Velocity Norm:"          << velocity_d_.norm());
+  // ROS_WARN_STREAM_THROTTLE(0.5, "Current Velocity Norm:"          << velocity.head(3).norm());
+  // ROS_WARN_STREAM_THROTTLE(0.5, "Classic Linear Control Force:"   << F_ee_des_.head(3).norm());
+  // ROS_WARN_STREAM_THROTTLE(0.5, "Classic Angular Control Force :" << F_ee_des_.tail(3).norm());
+  // //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++//
   //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++//
 
 
@@ -293,18 +419,18 @@ void CartesianTwistImpedanceController::update(const ros::Time& /*time*/,
   //++++++++++++++ ADDITIONAL CONTROL TORQUES (NULLSPACE AND TOOL COMPENSATION) ++++++++++++++//
   //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++//
 
-  // pseudoinverse for nullspace handling
-  // kinematic pseudoinverse
-  Eigen::MatrixXd jacobian_transpose_pinv;
-  pseudoInverse(jacobian.transpose(), jacobian_transpose_pinv);
+  // // pseudoinverse for nullspace handling
+  // // kinematic pseudoinverse
+  // Eigen::MatrixXd jacobian_transpose_pinv;
+  // pseudoInverse(jacobian.transpose(), jacobian_transpose_pinv);
 
-  // nullspace PD control with damping ratio = 1
-  ROS_WARN_STREAM_THROTTLE(0.5, "Nullspace stiffness:" << nullspace_stiffness_);
-  tau_nullspace << (Eigen::MatrixXd::Identity(7, 7) -
-                    jacobian.transpose() * jacobian_transpose_pinv) *
-                       (nullspace_stiffness_ * (q_d_nullspace_ - q) -
-                        (2.0 * sqrt(nullspace_stiffness_)) * dq);
-  // ROS_WARN_STREAM_THROTTLE(0.5, "Nullspace torques:" << tau_nullspace.transpose()); 
+  // // nullspace PD control with damping ratio = 1
+  // ROS_WARN_STREAM_THROTTLE(0.5, "Nullspace stiffness:" << nullspace_stiffness_);
+  // tau_nullspace << (Eigen::MatrixXd::Identity(7, 7) -
+  //                   jacobian.transpose() * jacobian_transpose_pinv) *
+  //                      (nullspace_stiffness_ * (q_d_nullspace_ - q) -
+  //                       (2.0 * sqrt(nullspace_stiffness_)) * dq);
+  // // ROS_WARN_STREAM_THROTTLE(0.5, "Nullspace torques:" << tau_nullspace.transpose()); 
 
   // Compute tool compensation (scoop/camera in scooping task)
   if (activate_tool_compensation_)
@@ -313,7 +439,7 @@ void CartesianTwistImpedanceController::update(const ros::Time& /*time*/,
     tau_tool.setZero();
 
   // FINAL DESIRED CONTROL TORQUE SENT TO ROBOT
-  tau_d << tau_task + tau_nullspace + coriolis - tau_tool;
+  tau_d << tau_task + coriolis - tau_tool;
   // ROS_WARN_STREAM_THROTTLE(0.5, "Desired control torque:" << tau_d.transpose());
 
   // Saturate torque rate to avoid discontinuities
@@ -370,6 +496,14 @@ void CartesianTwistImpedanceController::complianceParamCallback(
   }
 }
 
+
+void CartesianTwistImpedanceController::desiredJointVelCallback(const std_msgs::Float32MultiArray::ConstPtr& array)
+{
+
+  for (size_t i = 0; i < array->data.size(); ++i){
+    dqd(i) = array->data[i];
+  }
+}
 
 void CartesianTwistImpedanceController::desiredTwistCallback(
     const geometry_msgs::TwistConstPtr& msg) {

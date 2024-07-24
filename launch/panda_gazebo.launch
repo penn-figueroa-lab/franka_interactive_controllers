@@ -1,0 +1,294 @@
+<?xml version="1.0"?>
+<launch>
+
+  <!-- Gazebo & GUI Configuration -->
+  <arg name="gazebo"      default="true"  doc="Should the gazebo simulation be launched? Use false in case if you want to include this file and launch gazebo yourself" />
+  <arg name="headless"    default="false" doc="Should the gazebo GUI be launched?" />
+  <arg name="paused"      default="false" doc="Should the simulation directly be stopped at 0s?" />
+  <arg name="world"       default="worlds/empty.world" doc="Filename to a SDF World for gazebo to use" />
+  <arg name="rviz"        default="true" doc="Should RVIz be launched?" />
+
+  <!-- Robot Customization -->
+  <arg name="arm_id"      default="panda" doc="Name of the panda robot to spawn" />
+  <arg name="use_gripper" default="true"  doc="Should a franka hand be mounted on the flange?" />
+  <arg name="controller"  default="cartesian_twist_impedance"   doc="Which controller should be started? (One of {cartesian_pose, cartesian_twist, passiveDS}_impedance_controller )" />
+  <arg name="x"           default="0"     doc="How far forward to place the base of the robot in [m]?" />
+  <arg name="y"           default="0"     doc="How far leftwards to place the base of the robot in [m]?" />
+  <arg name="z"           default="0"     doc="How far upwards to place the base of the robot in [m]?" />
+  <arg name="roll"        default="0"     doc="How much to rotate the base of the robot around its X-axis in [rad]?" />
+  <arg name="pitch"       default="0"     doc="How much to rotate the base of the robot around its Y-axis in [rad]?" />
+  <arg name="yaw"         default="0"     doc="How much to rotate the base of the robot around its Z-axis in [rad]?" />
+  <arg name="xacro_args"  default=""      doc="Additional arguments to pass to panda_arm.urdf.xacro" />
+  <!-- Old initial position 
+  <arg name="initial_joint_positions"
+       doc="Initial joint configuration of the panda. Specify as a list of name/value pairs in form of '-J [name-of-joint] [value-in-rad]'. Default is a 90 degree bend in the elbow"
+       default="-J $(arg arm_id)_joint1 0
+                -J $(arg arm_id)_joint2 -0.1516284550464292
+                -J $(arg arm_id)_joint3 0
+                -J $(arg arm_id)_joint4 -2.1602991589328693
+                -J $(arg arm_id)_joint5 0.0063609233109487425
+                -J $(arg arm_id)_joint6 2.030401506252017
+                -J $(arg arm_id)_joint7 0.8428664707532099
+                -J $(arg arm_id)_finger_joint1 0.01
+                -J $(arg arm_id)_finger_joint2 0.01"
+       /> -->
+      <!-- Tunnel task initial position
+         <arg name="initial_joint_positions"
+       doc="Initial joint configuration of the panda. Specify as a list of name/value pairs in form of '-J [name-of-joint] [value-in-rad]'. Default is a 90 degree bend in the elbow"
+       default="-J $(arg arm_id)_joint1 -0.6910591539494524
+                -J $(arg arm_id)_joint2 0.20278481244474023
+                -J $(arg arm_id)_joint3 -0.37734634432111847
+                -J $(arg arm_id)_joint4 -1.8795028155768199
+                -J $(arg arm_id)_joint5 -0.0172041912859493
+                -J $(arg arm_id)_joint6 2.0124954257814065
+                -J $(arg arm_id)_joint7 -0.29059038456950326
+                -J $(arg arm_id)_finger_joint1 0.01
+                -J $(arg arm_id)_finger_joint2 0.01"
+       /> -->
+      <!-- Wiping task initial position
+         <arg name="initial_joint_positions"
+       doc="Initial joint configuration of the panda. Specify as a list of name/value pairs in form of '-J [name-of-joint] [value-in-rad]'. Default is a 90 degree bend in the elbow"
+       default="-J $(arg arm_id)_joint1 -0.7642326518209472
+                -J $(arg arm_id)_joint2 0.4231468355621457
+                -J $(arg arm_id)_joint3 -0.16346136910493136
+                -J $(arg arm_id)_joint4 -2.2789537760683665
+                -J $(arg arm_id)_joint5 -0.12537753591923284
+                -J $(arg arm_id)_joint6 2.792120991083375
+                -J $(arg arm_id)_joint7 -0.004533073075693395
+                -J $(arg arm_id)_finger_joint1 0.01
+                -J $(arg arm_id)_finger_joint2 0.01"
+       /> -->
+      <!-- Wiping loop task initial position -->
+         <arg name="initial_joint_positions"
+       doc="Initial joint configuration of the panda. Specify as a list of name/value pairs in form of '-J [name-of-joint] [value-in-rad]'. Default is a 90 degree bend in the elbow"
+       default="-J $(arg arm_id)_joint1 0.4832808
+                -J $(arg arm_id)_joint2 0.200357
+                -J $(arg arm_id)_joint3 0.7123594
+                -J $(arg arm_id)_joint4 -2.240429
+                -J $(arg arm_id)_joint5 -0.190416
+                -J $(arg arm_id)_joint6 2.38383158
+                -J $(arg arm_id)_joint7 1.324765
+                -J $(arg arm_id)_finger_joint1 0.01
+                -J $(arg arm_id)_finger_joint2 0.01"
+       />
+       <!-- Mixing task initial position
+         <arg name="initial_joint_positions"
+       doc="Initial joint configuration of the panda. Specify as a list of name/value pairs in form of '-J [name-of-joint] [value-in-rad]'. Default is a 90 degree bend in the elbow"
+       default="-J $(arg arm_id)_joint1 -0.7321045782206461
+                -J $(arg arm_id)_joint2 0.3565305209691134
+                -J $(arg arm_id)_joint3 -0.23898754618912754
+                -J $(arg arm_id)_joint4 -1.598673552993895
+                -J $(arg arm_id)_joint5 0.016059831400210278
+                -J $(arg arm_id)_joint6 1.8778854842359962
+                -J $(arg arm_id)_joint7 -0.19306306289409303
+                -J $(arg arm_id)_finger_joint1 0.01
+                -J $(arg arm_id)_finger_joint2 0.01"
+       /> -->
+       <!-- Mixing pan task initial position
+         <arg name="initial_joint_positions"
+       doc="Initial joint configuration of the panda. Specify as a list of name/value pairs in form of '-J [name-of-joint] [value-in-rad]'. Default is a 90 degree bend in the elbow"
+       default="-J $(arg arm_id)_joint1 -0.5692846844893706
+                -J $(arg arm_id)_joint2 0.10196715595112238
+                -J $(arg arm_id)_joint3 -0.41614693432817607
+                -J $(arg arm_id)_joint4 -2.1405303046380455
+                -J $(arg arm_id)_joint5 1.3735983536857406
+                -J $(arg arm_id)_joint6  1.27052770800928
+                -J $(arg arm_id)_joint7 1.6958714801464545
+                -J $(arg arm_id)_finger_joint1 0.01
+                -J $(arg arm_id)_finger_joint2 0.01"
+       /> -->
+       <!-- Wiping board task initial position
+       <arg name="initial_joint_positions"
+       doc="Initial joint configuration of the panda. Specify as a list of name/value pairs in form of '-J [name-of-joint] [value-in-rad]'. Default is a 90 degree bend in the elbow"
+       default="-J $(arg arm_id)_joint1 -0.15986286724298715
+                -J $(arg arm_id)_joint2 -0.31637300885248987
+                -J $(arg arm_id)_joint3 -0.2243265581707261
+                -J $(arg arm_id)_joint4 -2.6406887502565164
+                -J $(arg arm_id)_joint5 -0.10898640311928709
+                -J $(arg arm_id)_joint6  2.3242059086984295
+                -J $(arg arm_id)_joint7 0.48656369667539057
+                -J $(arg arm_id)_finger_joint1 0.01
+                -J $(arg arm_id)_finger_joint2 0.01"
+       /> -->
+       <!-- Wiping big board task initial position
+       <arg name="initial_joint_positions"
+       doc="Initial joint configuration of the panda. Specify as a list of name/value pairs in form of '-J [name-of-joint] [value-in-rad]'. Default is a 90 degree bend in the elbow"
+       default="-J $(arg arm_id)_joint1 -0.149989
+                -J $(arg arm_id)_joint2 0.198057
+                -J $(arg arm_id)_joint3  -0.508291
+                -J $(arg arm_id)_joint4 -2.607596
+                -J $(arg arm_id)_joint5  0.008289
+                -J $(arg arm_id)_joint6 2.792512
+                -J $(arg arm_id)_joint7  0.106539
+                -J $(arg arm_id)_finger_joint1 0.01
+                -J $(arg arm_id)_finger_joint2 0.01"
+       /> -->
+       <!-- Spiral big board task initial position
+       <arg name="initial_joint_positions"
+       doc="Initial joint configuration of the panda. Specify as a list of name/value pairs in form of '-J [name-of-joint] [value-in-rad]'. Default is a 90 degree bend in the elbow"
+       default="-J $(arg arm_id)_joint1 -0.690967
+                -J $(arg arm_id)_joint2 0.340468
+                -J $(arg arm_id)_joint3 -0.122308
+                -J $(arg arm_id)_joint4 -2.465842
+                -J $(arg arm_id)_joint5 -0.071405
+                -J $(arg arm_id)_joint6 2.827595
+                -J $(arg arm_id)_joint7   0.01087  
+                -J $(arg arm_id)_finger_joint1 0.01
+                -J $(arg arm_id)_finger_joint2 0.01"
+       /> -->
+       <!-- Wiping big board 2 task initial position
+       <arg name="initial_joint_positions"
+       doc="Initial joint configuration of the panda. Specify as a list of name/value pairs in form of '-J [name-of-joint] [value-in-rad]'. Default is a 90 degree bend in the elbow"
+       default="-J $(arg arm_id)_joint1 -0.042933
+                -J $(arg arm_id)_joint2  0.270374
+                -J $(arg arm_id)_joint3 -0.477475
+                -J $(arg arm_id)_joint4 -2.392042
+                -J $(arg arm_id)_joint5  0.161115
+                -J $(arg arm_id)_joint6 2.635071
+                -J $(arg arm_id)_joint7  0.145875    
+                -J $(arg arm_id)_finger_joint1 0.01
+                -J $(arg arm_id)_finger_joint2 0.01"
+       /> -->
+        <!-- Cap task initial position
+       <arg name="initial_joint_positions"
+       doc="Initial joint configuration of the panda. Specify as a list of name/value pairs in form of '-J [name-of-joint] [value-in-rad]'. Default is a 90 degree bend in the elbow"
+       default="-J $(arg arm_id)_joint1 0.433996
+                -J $(arg arm_id)_joint2 1.045836
+                -J $(arg arm_id)_joint3 -0.04842
+                -J $(arg arm_id)_joint4 -1.278926
+                -J $(arg arm_id)_joint5 0.678647
+                -J $(arg arm_id)_joint6 0.759534
+                -J $(arg arm_id)_joint7   -0.150564 
+                -J $(arg arm_id)_finger_joint1 0.01
+                -J $(arg arm_id)_finger_joint2 0.01"
+       /> -->
+        <!-- Massage task initial position
+       <arg name="initial_joint_positions"
+       doc="Initial joint configuration of the panda. Specify as a list of name/value pairs in form of '-J [name-of-joint] [value-in-rad]'. Default is a 90 degree bend in the elbow"
+       default="-J $(arg arm_id)_joint1 0.767074
+                -J $(arg arm_id)_joint2 -0.023818
+                -J $(arg arm_id)_joint3 -0.152508
+                -J $(arg arm_id)_joint4 -1.923819
+                -J $(arg arm_id)_joint5 -0.058976
+                -J $(arg arm_id)_joint6  1.875195
+                -J $(arg arm_id)_joint7  1.281996 
+                -J $(arg arm_id)_finger_joint1 0.01
+                -J $(arg arm_id)_finger_joint2 0.01"
+       /> -->
+       <!-- Massage task initial position late_start
+       <arg name="initial_joint_positions"
+       doc="Initial joint configuration of the panda. Specify as a list of name/value pairs in form of '-J [name-of-joint] [value-in-rad]'. Default is a 90 degree bend in the elbow"
+       default="-J $(arg arm_id)_joint1 0.6913
+                -J $(arg arm_id)_joint2 0.876823
+                -J $(arg arm_id)_joint3 -0.15702
+                -J $(arg arm_id)_joint4 -1.129388
+                -J $(arg arm_id)_joint5 0.017314
+                -J $(arg arm_id)_joint6  2.091326
+                -J $(arg arm_id)_joint7  1.262764  
+                -J $(arg arm_id)_finger_joint1 0.01
+                -J $(arg arm_id)_finger_joint2 0.01"
+       /> -->
+       <!-- Towel task initial position late_start
+       <arg name="initial_joint_positions"
+       doc="Initial joint configuration of the panda. Specify as a list of name/value pairs in form of '-J [name-of-joint] [value-in-rad]'. Default is a 90 degree bend in the elbow"
+       default="-J $(arg arm_id)_joint1 1.077479
+                -J $(arg arm_id)_joint2  1.008495
+                -J $(arg arm_id)_joint3 -0.716086
+                -J $(arg arm_id)_joint4 -1.188719
+                -J $(arg arm_id)_joint5  0.570416
+                -J $(arg arm_id)_joint6  2.061064
+                -J $(arg arm_id)_joint7  1.011328        
+                -J $(arg arm_id)_finger_joint1 0.01
+                -J $(arg arm_id)_finger_joint2 0.01"
+       /> -->
+
+  <include file="$(find gazebo_ros)/launch/empty_world.launch" if="$(arg gazebo)">
+    <arg name="world_name" value="$(arg world)"/>
+    <!-- Always start in paused mode, and only unpause when spawning the model -->
+    <arg name="paused" value="true"/>
+    <arg name="gui" value="$(eval not arg('headless'))"/>
+    <arg name="use_sim_time" value="true"/>
+  </include>
+
+  <param name="robot_description"
+         command="$(find xacro)/xacro $(find franka_description)/robots/panda/panda.urdf.xacro
+                  gazebo:=true
+                  hand:=$(arg use_gripper)
+                  arm_id:=$(arg arm_id)
+                  xyz:='$(arg x) $(arg y) $(arg z)'
+                  rpy:='$(arg roll) $(arg pitch) $(arg yaw)'
+                  $(arg xacro_args)">
+  </param>
+
+  <rosparam file="$(find franka_gazebo)/config/franka_hw_sim.yaml" subst_value="true" />
+  <rosparam file="$(find franka_interactive_controllers)/config/franka_interactive_sim_controllers.yaml" subst_value="true" />
+  <!-- <rosparam file="$(find franka_gazebo)/config/sim_controllers.yaml" subst_value="true" /> -->
+
+  <param name="m_ee" value="0.76" if="$(arg use_gripper)" />
+
+  <arg name="unpause" value="$(eval '' if arg('paused') else '-unpause')" />
+  <node name="$(arg arm_id)_model_spawner"
+        pkg="gazebo_ros"
+        type="spawn_model"
+        args="-param robot_description -urdf -model $(arg arm_id) $(arg unpause)
+              $(arg initial_joint_positions)
+              "/>
+
+  <!-- Spawn required ROS controllers -->
+  <node pkg="controller_manager"
+        type="spawner"
+        name="$(arg arm_id)_gripper_spawner"
+        if="$(arg use_gripper)"
+        args="franka_gripper"
+        respawn="false"
+  />
+
+  <!-- spawns the controller after the robot was put into its initial joint pose -->
+  <node pkg="controller_manager"
+        type="spawner"
+        name="$(arg arm_id)_controller_spawner"
+        respawn="false" output="screen"
+        args="--wait-for initialized franka_state_controller"
+  />
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
+  <node name="joint_state_publisher" type="joint_state_publisher" pkg="joint_state_publisher">
+    <rosparam param="source_list">[franka_state_controller/joint_states, franka_gripper/joint_states] </rosparam>
+    <param name="rate" value="30"/>
+  </node>
+
+  <!-- Bring up rqt_reconfigure to modify values -->
+  <node name="rqt_reconfigure" pkg="rqt_reconfigure" type="rqt_reconfigure" required="false" />
+
+
+  <!-- Convert franka state of EE to Geometry Message PoseStamped!! -->  
+  <node name="franka_to_geometry_messages" pkg="franka_interactive_controllers" type="franka_to_geometry_messages.py" respawn="false" output="screen"/>
+
+  <!-- Bring up gripper GUI to control gripper from code -->  
+  <node name="franka_gui_gripper_run" pkg="franka_interactive_controllers" type="franka_gui_gripper_run.py" respawn="false" output="screen"/>
+
+  <!-- Bring up rviz configuration -->
+  <node  pkg="rviz" type="rviz" output="screen" name="rviz" args="-d $(find franka_interactive_controllers)/launch/rviz/franka_description.rviz" if="$(arg rviz)"/>
+
+  <!-- Start only if cartesian_pose_impedance_controller is set in "controller"-->
+  <include file="$(find franka_interactive_controllers)/launch/cartesian_pose_impedance_controller.launch" 
+    if="$(eval arg('controller') == 'cartesian_pose_impedance')">
+  </include>
+
+
+  <!-- Start only if cartesian_twist_impedance_controller is set in "controller"-->
+  <include file="$(find franka_interactive_controllers)/launch/cartesian_twist_impedance_controller.launch" if="$(eval arg('controller') == 'cartesian_twist_impedance')">
+  </include>
+
+  <!-- Start only if passive_ds_impedance_controller is set in "controller"-->
+  <include file="$(find franka_interactive_controllers)/launch/passiveDS_impedance_controller.launch" if="$(eval arg('controller') == 'passiveDS_impedance')">
+  </include>
+
+  <!-- Start only if joint_velocity_controller is set in "controller"-->
+  <include file="$(find franka_interactive_controllers)/launch/joint_velocity_controller.launch" if="$(eval arg('controller') == 'joint_velocity')">
+  </include>
+
+  <!-- Start only if joint_velocity_controller is set in "controller"-->
+  <include file="$(find franka_interactive_controllers)/launch/joint_velocity_impedance_controller.launch" if="$(eval arg('controller') == 'joint_velocity_impedance')">
+  </include>
+
+</launch>

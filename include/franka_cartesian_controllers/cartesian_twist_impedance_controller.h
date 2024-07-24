@@ -8,6 +8,7 @@
 
 #include <controller_interface/multi_interface_controller.h>
 #include <dynamic_reconfigure/server.h>
+#include <std_msgs/Float32MultiArray.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/Twist.h>
 #include <hardware_interface/joint_command_interface.h>
@@ -61,6 +62,9 @@ class CartesianTwistImpedanceController : public controller_interface::MultiInte
   Eigen::Quaterniond orientation_d_target_;
   Eigen::Vector3d velocity_d_;
 
+
+  Eigen::VectorXd dqd;
+
   // Timing
   ros::Duration elapsed_time;
   double last_cmd_time;
@@ -81,7 +85,9 @@ class CartesianTwistImpedanceController : public controller_interface::MultiInte
 
   // Desired twist subscriber
   ros::Subscriber sub_desired_twist_;
+  ros::Subscriber sub_desired_joint_vel;
   void desiredTwistCallback(const geometry_msgs::TwistConstPtr& msg);
+  void desiredJointVelCallback(const std_msgs::Float32MultiArray::ConstPtr& array);
 };
 
 }  // namespace franka_interactive_controllers

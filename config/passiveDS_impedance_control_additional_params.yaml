@@ -1,8 +1,8 @@
 # ***** Damping gains for the linear passive velocity control law ***** #
 linear_damping_eigenvalues:  [150, 150, 150] #Kuka experiments use 100!.. 150 for franka already tracks desired velocity quite well
 # linear_damping_eigenvalues:  [0., 0., 0.] #Kuka experiments use 100!.. 150 for franka already tracks desired velocity quite well
-angular_damping_eigenvalues: [5., 5., 5.] # If activated in Yaml file it will use this for control during DS!
-# angular_damping_eigenvalues: [2.5, 2.5, 2.5] # If activated in Yaml file it will use this for control during DS!
+# angular_damping_eigenvalues: [12., 12., 12.] # If activated in Yaml file it will use this for control during DS!
+angular_damping_eigenvalues: [8, 8, 8] # If activated in Yaml file it will use this for control during DS!
 
 
 # ***** Cartesian 6DOF Stiffness for pose impedance control (this is the fallback controller used when no velocity is sent or robot reaches attractor!) ***** #
@@ -22,7 +22,7 @@ cartesian_stiffness_mode: 0 # Initial fallback stiffness mode 0: grav-comp, 1: s
 # ***** Nominal nullspace stiffness used for all joints ***** #
 # nullspace_stiffness: 0.01 # TOO COMPLIANT.. ROBOT WILL GET IN WEIRD CONFIGURATION WHEN DOING GRAV COMP
 # nullspace_stiffness: 0.1 # With strong motions ROBOT WILL GET IN WEIRD CONFIGURATION WHEN DOING GRAV COMP
-nullspace_stiffness: 0.25 #Good behavior in REAL ROBOT MIT MUSEUM (This seems like the optimal stiffness)******
+nullspace_stiffness: 0.01 #Good behavior in REAL ROBOT MIT MUSEUM (This seems like the optimal stiffness)******
 # nullspace_stiffness: 0.5 #Good behavior in REAL ROBOT MIT MUSEUM (stays near nullspace while doing grav comp.. still a BIT Stiff)
 # nullspace_stiffness: 1.0 #Good behavior in REAL ROBOT MIT MUSEUM (stays near nullspace but becomes a bit stiff)
 

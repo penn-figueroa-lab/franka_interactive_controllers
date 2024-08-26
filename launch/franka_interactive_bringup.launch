@@ -3,7 +3,7 @@
   <arg name="robot_ip"            default="172.16.0.2"/>
   <arg name="load_gripper"        default="true" />
   <arg name="use_gripper_gui"     default="true" />
-  <arg name="controller"          default="cartesian_twist_impedance"   doc="Which controller should be started? (One of {cartesian_pose, cartesian_twist, passiveDS}_impedance_controller )" />
+  <arg name="controller"          default="passiveDS_impedance"   doc="Which controller should be started? (One of {cartesian_pose, cartesian_twist, passiveDS}_impedance_controller )" />
   <arg name="bringup_rviz"        default="true" />
   <arg name="load_franka_control" default="true" />
 
@@ -29,7 +29,6 @@
 
     <!-- Start only if passive_ds_impedance_controller is set in "controller"-->
     <include file="$(find franka_interactive_controllers)/launch/passiveDS_impedance_controller.launch" if="$(eval arg('controller') == 'passiveDS_impedance')">
-      <arg name="params_yaml_file" value="$(find mit_museum_inspection_demo)/config/museum_passiveDS_impedance_control_additional_params.yaml"/>
     </include>
   </group>
 

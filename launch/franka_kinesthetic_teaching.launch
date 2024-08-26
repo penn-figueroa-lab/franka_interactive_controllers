@@ -3,10 +3,10 @@
   <arg name="robot_ip"                   default="172.16.0.2"/>
   <arg name="load_gripper"               default="false" />
   <arg name="use_gripper_gui"            default="false" />
-  <arg name="load_franka_control"        default="false" />
+  <arg name="load_franka_control"        default="true" />
   <arg name="load_kinesthetic_teaching"  default="true" />
 
-  <arg name="path_save_rosbag"           default="/home/nadiafig/recordings/farhad-demos/bags/"/>
+  <arg name="path_save_rosbag"           default="/home/figueroa-lab11/franka_ws/src/demo_recorded"/>
   <arg name="topics_rosbag"       
     default="/tf 
     /franka_state_controller/joint_states 

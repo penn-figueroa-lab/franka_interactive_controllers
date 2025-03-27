@@ -381,6 +381,11 @@ void PassiveDSImpedanceController::starting(const ros::Time& /*time*/) {
   real_damping_eigval1_        = damping_eigval1_;
   desired_damp_eigval_cb_      = real_damping_eigval0_;
   desired_damp_eigval_cb_prev_ = real_damping_eigval0_;
+
+  real_ang_damping_eigval0_    = ang_damping_eigval0_;
+  real_ang_damping_eigval1_    = ang_damping_eigval1_;
+  desired_ang_damp_eigval_cb_      = real_ang_damping_eigval0_;
+  desired_ang_damp_eigval_cb_prev_ = real_ang_damping_eigval0_;
   new_damping_msg_             = false;
 
 }
@@ -439,8 +444,8 @@ void PassiveDSImpedanceController::update(const ros::Time& /*time*/,
   Eigen::VectorXd tau_task(7), tau_nullspace(7), tau_nullspace_error(7), tau_d(7), tau_tool(7);
 
   // For Debugging...
-  ROS_WARN_STREAM_THROTTLE(0.5, "Desired Velocity Norm:" << velocity_d_.norm());
-  ROS_WARN_STREAM_THROTTLE(0.5, "Current Velocity Norm:" << velocity.head(3).norm());
+  // ROS_WARN_STREAM_THROTTLE(0.5, "Desired Velocity Norm:" << velocity_d_.norm());
+  // ROS_WARN_STREAM_THROTTLE(0.5, "Current Velocity Norm:" << velocity.head(3).norm());
 
   Eigen::VectorXd     F_ee_des_;
   F_ee_des_.resize(6);  
@@ -463,14 +468,14 @@ void PassiveDSImpedanceController::update(const ros::Time& /*time*/,
   // Passive DS Impedance Contoller for Linear Velocity Error
   F_linear_des_.setZero();
 
-  real_damping_eigval0_ = damping_eigval0_; 
-  real_damping_eigval1_ = damping_eigval1_;
+  // real_damping_eigval0_ = damping_eigval0_; 
+  // real_damping_eigval1_ = damping_eigval1_;
 
-  // Change eigenvalues to the ones defined in the callback if given!
-  if (new_damping_msg_){
-    real_damping_eigval0_ = desired_damp_eigval_cb_; 
-    real_damping_eigval1_ = desired_damp_eigval_cb_;    
-  }
+  // // Change eigenvalues to the ones defined in the callback if given!
+  // if (new_damping_msg_){
+  //   real_damping_eigval0_ = desired_damp_eigval_cb_; 
+  //   // real_damping_eigval1_ = desired_damp_eigval_cb_;    
+  // }
 
   // Reduce gains to 0 if desired velocity is not given or = 0
   real_damping_eigval0_ = velocity_d_.norm()<0.00001 ? 0.1 : real_damping_eigval0_;
@@ -481,43 +486,58 @@ void PassiveDSImpedanceController::update(const ros::Time& /*time*/,
   F_linear_des_ << passive_ds_controller->get_output(); 
   F_ee_des_.head(3) = F_linear_des_;
   
-  ROS_WARN_STREAM_THROTTLE(0.5, "Damping Eigenvalues:" << real_damping_eigval0_ << " " << real_damping_eigval0_);
-  ROS_WARN_STREAM_THROTTLE(0.5, "PassiveDS Linear Force:" << F_ee_des_.head(3).norm());
+  ROS_WARN_STREAM_THROTTLE(0.5, "Real Damping Eigenvalues:" << real_damping_eigval0_ << " " << real_damping_eigval1_);
+  // ROS_WARN_STREAM_THROTTLE(0.5, "PassiveDS Linear Force:" << F_ee_des_.head(3).norm());
   desired_damp_eigval_cb_prev_ = desired_damp_eigval_cb_;
 
   // ------------------------------------------------------------------------//
   // ----------------- Orientation Error -> Force ---------------------------//
   // ------------------------------------------------------------------------//
 
-  //***** Using PassiveDS control law for angular velocity trackin given desired quaternion_d_ 
-  Eigen::Vector4d _ee_quat; _ee_quat.setZero();
-  _ee_quat[0] = orientation.w(); _ee_quat.segment(1,3) = orientation.vec();
-  Eigen::Vector4d _ee_des_quat; _ee_des_quat.setZero();
-  _ee_des_quat[0] = orientation_d_.w(); _ee_des_quat.segment(1,3) = orientation_d_.vec();
+  // //***** Using PassiveDS control law for angular velocity trackin given desired quaternion_d_ 
+  // Eigen::Vector4d _ee_quat; _ee_quat.setZero();
+  // _ee_quat[0] = orientation.w(); _ee_quat.segment(1,3) = orientation.vec();
+  // Eigen::Vector4d _ee_des_quat; _ee_des_quat.setZero();
+  // _ee_des_quat[0] = orientation_d_.w(); _ee_des_quat.segment(1,3) = orientation_d_.vec();
 
-  // Computing desired Angular Velocity from desired "fixed" quaternion
-  Eigen::Vector4d dqd = KinematicsUtils<double>::slerpQuaternion(_ee_quat, _ee_des_quat, 0.5);    
-  Eigen::Vector4d deltaQ = dqd - _ee_quat;
-  Eigen::Vector4d qconj = _ee_quat;
-  qconj.segment(1,3) = -1 * qconj.segment(1,3);
-  Eigen::Vector4d temp_angVel = KinematicsUtils<double>::quaternionProduct(deltaQ, qconj);
-  Eigen::Vector3d tmp_angular_vel = temp_angVel.segment(1,3);
-  double maxDq(0.3), dsGain_ori (10.0);
-  // double maxDq(0.3), dsGain_ori (5.0);
-  if (tmp_angular_vel.norm() > maxDq)
-      tmp_angular_vel = maxDq * tmp_angular_vel.normalized();
-  double theta_gq = (-.5/(4*maxDq*maxDq)) * tmp_angular_vel.transpose() * tmp_angular_vel;
-  dx_angular_des_  = 2 * dsGain_ori*(1+std::exp(theta_gq)) * tmp_angular_vel;
+  // // Computing desired Angular Velocity from desired "fixed" quaternion
+  // Eigen::Vector4d dqd = KinematicsUtils<double>::slerpQuaternion(_ee_quat, _ee_des_quat, 0.5);    
+  // Eigen::Vector4d deltaQ = dqd - _ee_quat;
+  // Eigen::Vector4d qconj = _ee_quat;
+  // qconj.segment(1,3) = -1 * qconj.segment(1,3);
+  // Eigen::Vector4d temp_angVel = KinematicsUtils<double>::quaternionProduct(deltaQ, qconj);
+  // Eigen::Vector3d tmp_angular_vel = temp_angVel.segment(1,3);
+  // double maxDq(0.3), dsGain_ori (10.0);
+  // // double maxDq(0.3), dsGain_ori (5.0);
+  // if (tmp_angular_vel.norm() > maxDq)
+  //     tmp_angular_vel = maxDq * tmp_angular_vel.normalized();
+  // double theta_gq = (-.5/(4*maxDq*maxDq)) * tmp_angular_vel.transpose() * tmp_angular_vel;
+  // dx_angular_des_  = 2 * dsGain_ori*(1+std::exp(theta_gq)) * tmp_angular_vel;
 
-  ROS_WARN_STREAM_THROTTLE(0.5, "Desired Angular Velocity Norm:" << dx_angular_des_.norm());
-  ROS_WARN_STREAM_THROTTLE(0.5, "Current Angular Velocity Norm:" << dx_angular_msr_.norm());
+  // ROS_WARN_STREAM_THROTTLE(0.5, "Desired Angular Velocity Norm:" << dx_angular_des_.norm());
+  // ROS_WARN_STREAM_THROTTLE(0.5, "Current Angular Velocity Norm:" << dx_angular_msr_.norm());
 
   // Passive DS Impedance Contoller for Angular Velocity Error
+  // real_ang_damping_eigval0_ = ang_damping_eigval0_; 
+  // real_ang_damping_eigval1_ = ang_damping_eigval1_;
+
+  // // Change eigenvalues to the ones defined in the callback if given!
+  // if (new_damping_msg_){
+  //   real_ang_damping_eigval0_ = desired_ang_damp_eigval_cb_; 
+  //   // real_ang_damping_eigval1_ = desired_ang_damp_eigval_cb_;    
+  // }
+
+  // Reduce gains to 0 if desired velocity is not given or = 0
+  real_ang_damping_eigval0_ = dx_angular_des_.norm()<0.00001 ? 0.1 : real_ang_damping_eigval0_;
+  real_ang_damping_eigval1_ = dx_angular_des_.norm()<0.00001 ? 0.1 : real_ang_damping_eigval1_;
+  ang_passive_ds_controller->set_damping_eigval(real_ang_damping_eigval0_,real_ang_damping_eigval1_);
   ang_passive_ds_controller->update(dx_angular_msr_,dx_angular_des_);
   F_angular_des_ << ang_passive_ds_controller->get_output();
   F_ee_des_.tail(3) = F_angular_des_; 
-  ROS_WARN_STREAM_THROTTLE(0.5, "Ang. Damping Eigenvalues:" << ang_damping_eigval0_ << " " << ang_damping_eigval1_);
+  ROS_WARN_STREAM_THROTTLE(0.5, "Ang. Damping Eigenvalues:" << real_ang_damping_eigval0_ << " " << real_ang_damping_eigval1_);
   ROS_WARN_STREAM_THROTTLE(0.5, "PassiveDS Angular Force:" << F_ee_des_.tail(3).norm());
+
+  // desired_ang_damp_eigval_cb_prev_ = desired_ang_damp_eigval_cb_;
 
   // Convert full control wrench to torque
   tau_task << jacobian.transpose() * F_ee_des_;
@@ -532,7 +552,7 @@ void PassiveDSImpedanceController::update(const ros::Time& /*time*/,
   pseudoInverse(jacobian.transpose(), jacobian_transpose_pinv);
 
   // nullspace PD control with damping ratio = 1
-  ROS_WARN_STREAM_THROTTLE(0.5, "Nullspace stiffness:" << nullspace_stiffness_);
+  // ROS_WARN_STREAM_THROTTLE(0.5, "Nullspace stiffness:" << nullspace_stiffness_);
 
   Eigen::VectorXd nullspace_stiffness_vec(7);
 
@@ -607,6 +627,7 @@ void PassiveDSImpedanceController::desiredTwistCallback(
     const geometry_msgs::TwistConstPtr& msg) {
 
   velocity_d_      << msg->linear.x, msg->linear.y, msg->linear.z;
+  dx_angular_des_  << msg->angular.x, msg->angular.y, msg->angular.z;
   last_cmd_time    = ros::Time::now().toSec();
 
   franka::RobotState robot_state = state_handle_->getRobotState();
@@ -620,10 +641,14 @@ void PassiveDSImpedanceController::desiredTwistCallback(
 }
 
 void PassiveDSImpedanceController::desiredDampingCallback(
-    const std_msgs::Float32Ptr& msg) {
-    
-    desired_damp_eigval_cb_ =  msg->data;
-    ROS_WARN_STREAM_THROTTLE(0.5, "Desired damping eigval from callback:" << desired_damp_eigval_cb_);
+    const std_msgs::Float32MultiArrayPtr& msg) {
+    real_damping_eigval0_     =  msg->data[0];
+    real_damping_eigval1_     =  msg->data[1];
+    real_ang_damping_eigval0_ =  msg->data[2];
+    real_ang_damping_eigval1_ =  msg->data[3];
+
+    // ROS_WARN_STREAM_THROTTLE(0.5, "Desired damping eigval from callback:" << desired_damp_eigval_cb_);
+    // ROS_WARN_STREAM_THROTTLE(0.5, "Desired angular damping eigval from callback:" << desired_ang_damp_eigval_cb_);
 
     last_msg_time    = ros::Time::now().toSec();
     new_damping_msg_ = true;

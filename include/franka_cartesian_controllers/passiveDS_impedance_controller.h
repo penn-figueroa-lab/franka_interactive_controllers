@@ -12,6 +12,7 @@
 #include <geometry_msgs/Twist.h>
 #include <std_msgs/Int32.h>
 #include <std_msgs/Float32.h>
+#include <std_msgs/Float32MultiArray.h>
 #include <hardware_interface/joint_command_interface.h>
 #include <hardware_interface/robot_hw.h>
 #include <ros/node_handle.h>
@@ -149,6 +150,8 @@ class PassiveDSImpedanceController : public controller_interface::MultiInterface
   double              real_damping_eigval1_;
   double              ang_damping_eigval0_;
   double              ang_damping_eigval1_;
+  double              real_ang_damping_eigval0_;
+  double              real_ang_damping_eigval1_;
  
   // UNUSED SHOULD CLEAN UP!
   bool                bVelCommand;
@@ -164,6 +167,8 @@ class PassiveDSImpedanceController : public controller_interface::MultiInterface
   std::unique_ptr<PassiveDS> ang_passive_ds_controller;
   double                     desired_damp_eigval_cb_;
   double                     desired_damp_eigval_cb_prev_;
+  double                     desired_ang_damp_eigval_cb_;
+  double                     desired_ang_damp_eigval_cb_prev_;
   bool                       new_damping_msg_;
 
   // Dynamic reconfigure
@@ -179,7 +184,7 @@ class PassiveDSImpedanceController : public controller_interface::MultiInterface
   ros::Subscriber sub_desired_twist_;
   ros::Subscriber sub_desired_damping_;
   void desiredTwistCallback(const geometry_msgs::TwistConstPtr& msg);
-  void desiredDampingCallback(const std_msgs::Float32Ptr& msg); // In case damping values want to be changed!
+  void desiredDampingCallback(const std_msgs::Float32MultiArrayPtr& msg); // In case damping values want to be changed!
 
 };
 

@@ -396,10 +396,25 @@ void CartesianTwistImpedanceController::update(const ros::Time& /*time*/,
   // Eigen::VectorXd dqd(7);
   // dqd << omega, omega, omega, omega, omega, omega, omega;
 
+  // Eigen::VectorXd target_q(7);
+  // target_q << -0.288861605244382, -0.28900155151091544, 0.36705402119122194, -2.2423147433865847, 0.01982726681999609, 2.05398093345296, 0.8219617325880476;
+  // Eigen::VectorXd diss(7);
+  // diss << target_q - q;
+  // ROS_WARN_STREAM_THROTTLE(0.5, "Current diss: "     << diss.transpose());
+  // float unit_diss = diss.norm();
+  // ROS_WARN_STREAM_THROTTLE(0.5, "Current diss norm: "     << unit_diss);
+  // if (unit_diss > 0.5){
+  //   unit_diss = 0.5;
+  // }
+  
+
+  // Eigen::VectorXd dqdd(7);
+  // dqdd << unit_diss * (diss / diss.norm());
+  // ROS_WARN_STREAM_THROTTLE(0.5, "Current Desired dq: "     << dqdd.transpose());
 
 
   Eigen::VectorXd damping(7);
-  damping << -5, -5, -5, -5, -5, -5, -5;
+  damping << -20, -15, -15, -15, -15, -15, -15;
   tau_task << damping.array() * (dq - dqd).array();
   // std::cout << tau_task << std::endl;
 

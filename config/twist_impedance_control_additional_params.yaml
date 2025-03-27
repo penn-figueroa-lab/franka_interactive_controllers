@@ -18,7 +18,7 @@ nullspace_stiffness: 0.01 # TOO COMLPLIANT.. ROBOT WILL GET IN WEIRD CONFIGURATI
 q_nullspace: [0.005264432735087578, -0.17525178575515743, 0.08762187454773385, -1.8310899806440901, 0.029428643955124744, 1.680440888034793, 0.9123517645864205]
 
 # F_ext wrench to compensate for camera or tool on end-effector
-external_tool_compensation: [0, 0, 0.0, 0, 0.0, 0.0] #Check F_ext
+external_tool_compensation: [-0.8969, 0.2426, -1.0882, 0, 0.0, 0.0] #Check F_ext
 
 
 #### OLD VALUES FROM LTLDS-RSS PAPER (Keeping them here for historical reasons)!!

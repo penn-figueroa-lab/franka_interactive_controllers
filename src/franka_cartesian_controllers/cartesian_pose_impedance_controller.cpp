@@ -165,7 +165,7 @@ bool CartesianPoseImpedanceController::init(hardware_interface::RobotHW* robot_h
   q_d_nullspace_.setZero();
   std::vector<double> q_nullspace;
   if (node_handle.getParam("q_nullspace", q_nullspace)) {
-    q_d_nullspace_initialized_ = true;
+    q_d_nullspace_initialized_ = false;
     if (q_nullspace.size() != 7) {
       ROS_ERROR(
         "CartesianPoseImpedanceController: Invalid or no q_nullspace parameters provided, "
@@ -333,7 +333,7 @@ void CartesianPoseImpedanceController::desiredPoseCallback(
     const geometry_msgs::PoseStampedConstPtr& msg) {
 
   position_d_target_ << msg->pose.position.x, msg->pose.position.y, msg->pose.position.z;
-  // ROS_INFO_STREAM("[CALLBACK] Desired ee position from DS: " << position_d_target_);
+  ROS_INFO_STREAM("[CALLBACK] Desired ee position from DS: " << position_d_target_);
   
   Eigen::Quaterniond last_orientation_d_target(orientation_d_target_);
   orientation_d_target_.coeffs() << msg->pose.orientation.x, msg->pose.orientation.y,

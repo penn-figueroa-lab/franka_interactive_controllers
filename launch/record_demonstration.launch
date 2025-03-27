@@ -1,0 +1,41 @@
+<?xml version="1.0" ?>
+<launch>
+    <arg name="robot_ip"            default="172.16.0.2"/>
+    <arg name="load_gripper"        default="true" />
+    <arg name="use_gripper_gui"     default="true" />
+    <arg name="controller"          default="cartesian_twist_impedance"   doc="Which controller should be started? (One of {cartesian_pose, cartesian_twist, passiveDS}_impedance )" />
+    <arg name="bringup_rviz"        default="true" />
+    <arg name="load_franka_control" default="true" />
+
+    <arg name="path_save_rosbag"           default="/home/figueroa-lab11/franka_ws/src/demo_recorded"/>
+    <arg name="topics_rosbag"       
+        default="/tf 
+        /franka_state_controller/joint_states 
+        /franka_state_controller/F_ext 
+        /franka_state_controller/O_T_EE 
+        /franka_state_controller/O_T_FL 
+        /franka_gripper/joint_states"/>
+    <arg name="use_recorder_gui" default="true" />
+
+
+    <!-- Loads robot control interface -->
+    <include file="$(find franka_interactive_controllers)/launch/franka_interactive_bringup.launch" >
+        <arg name="robot_ip"            value="$(arg robot_ip)"            />
+        <arg name="load_gripper"        value="$(arg load_gripper)"        />
+        <arg name="use_gripper_gui"     value="$(arg use_gripper_gui)"     />
+        <arg name="controller"          value="$(arg controller)"          />
+        <arg name="bringup_rviz"        value="$(arg bringup_rviz)"        />
+        <arg name="load_franka_control" value="$(arg load_franka_control)" />
+    </include>
+
+    <include file="$(find easy_kinesthetic_recording)/launch/franka_record_demonstrations.launch" >
+      <arg name="topics"            value="$(arg topics_rosbag)" />
+      <arg name="path_save"        value="$(arg path_save_rosbag)" />
+      <arg name="use_recorder_gui" value="$(arg use_recorder_gui)" />
+    </include>
+
+    <!-- <include file="$(find natnet_ros_cpp)/launch/natnet_ros.launch" />
+    <node name="track_position" pkg="lfd_ds"  type="lfd_ds_track_position" output="screen"/>
+    <node name="record_tf" pkg="lfd_ds" type="record_tf" output="screen" /> -->
+
+</launch>

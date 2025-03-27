@@ -9,9 +9,11 @@
 #include <controller_interface/multi_interface_controller.h>
 #include <dynamic_reconfigure/server.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/Pose.h>
 #include <geometry_msgs/Twist.h>
 #include <std_msgs/Int32.h>
 #include <std_msgs/Float32.h>
+#include <std_msgs/Float32MultiArray.h>
 #include <hardware_interface/joint_command_interface.h>
 #include <hardware_interface/robot_hw.h>
 #include <ros/node_handle.h>
@@ -53,6 +55,7 @@ class PassiveDS
 private:
     double eigVal0;
     double eigVal1;
+    double eigVal2;
     double desired_damping;
     Eigen::Matrix3d damping_eigval = Eigen::Matrix3d::Identity();
     Eigen::Matrix3d baseMat = Eigen::Matrix3d::Identity();
@@ -61,9 +64,9 @@ private:
     Eigen::Vector3d control_output = Eigen::Vector3d::Zero();
     void updateDampingMatrix(const Eigen::Vector3d& ref_vel);
 public:
-    PassiveDS(const double& lam0, const double& lam1);
+    PassiveDS(const double& lam0, const double& lam1, const double& lam2);
     ~PassiveDS();
-    void set_damping_eigval(const double& lam0, const double& lam1);
+    void set_damping_eigval(const double& lam0, const double& lam1, const double& lam2);
     void update(const Eigen::Vector3d& vel, const Eigen::Vector3d& des_vel);
     Eigen::Vector3d get_output();
 };
@@ -145,8 +148,10 @@ class PassiveDSImpedanceController : public controller_interface::MultiInterface
 
   double              damping_eigval0_;
   double              damping_eigval1_;
+  double              damping_eigval2_;
   double              real_damping_eigval0_;
   double              real_damping_eigval1_;
+  double              real_damping_eigval2_;
   double              ang_damping_eigval0_;
   double              ang_damping_eigval1_;
  
@@ -178,8 +183,8 @@ class PassiveDSImpedanceController : public controller_interface::MultiInterface
   // Desired twist subscriber (To take in desired DS velocity)
   ros::Subscriber sub_desired_twist_;
   ros::Subscriber sub_desired_damping_;
-  void desiredTwistCallback(const geometry_msgs::TwistConstPtr& msg);
-  void desiredDampingCallback(const std_msgs::Float32Ptr& msg); // In case damping values want to be changed!
+  void desiredTwistCallback(const geometry_msgs::PoseConstPtr& msg);
+  void desiredDampingCallback(const std_msgs::Float32MultiArrayPtr& msg); // In case damping values want to be changed!
 
 };
 

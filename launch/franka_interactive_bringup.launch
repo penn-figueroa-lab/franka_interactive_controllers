@@ -3,10 +3,10 @@
   <arg name="robot_ip"            default="172.16.0.2"/>
   <arg name="load_gripper"        default="false" />
   <arg name="use_gripper_gui"     default="false" />
-  <arg name="controller"          default="gravity_compensation"   doc="Which controller should be started? (One of {cartesian_pose, cartesian_twist, passiveDS}_impedance_controller )" />
+  <arg name="controller"          default="passiveDS_impedance"   doc="Which controller should be started? (One of {cartesian_pose, cartesian_twist, passiveDS}_impedance_controller )" />
   <arg name="bringup_rviz"        default="true" />
   <arg name="load_franka_control" default="true" />
-  <arg name="load_qp"             default="true" />
+  <arg name="load_qp"             default="false" />
 
 
 
@@ -52,8 +52,7 @@
     <node  pkg="rviz" type="rviz" output="screen" name="rviz" args="-d $(find franka_interactive_controllers)/launch/rviz/franka_description.rviz" if="$(arg bringup_rviz)"/>
   </group>
 
-  <include file="$(find constr_passive)/launch/control.launch" if="$(arg load_qp)"></include>
+  <include file="$(find constr_passive)/launch/control_pose.launch" if="$(arg load_qp)"></include>
 
-  <include file="$(find natnet_ros_cpp)/launch/natnet_ros.launch"></include>
 
 </launch>

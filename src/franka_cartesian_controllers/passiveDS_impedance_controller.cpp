@@ -41,18 +41,19 @@ namespace franka_interactive_controllers {
 //|    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //|    GNU General Public License for more details.
 //|
-PassiveDS::PassiveDS(const double& lam0, const double& lam1):eigVal0(lam0),eigVal1(lam1){
-    set_damping_eigval(lam0,lam1);
+PassiveDS::PassiveDS(const double& lam0, const double& lam1, const double& lam2):eigVal0(lam0),eigVal1(lam1),eigVal2(lam2){
+    set_damping_eigval(lam0,lam1,lam2);
 }
 
 PassiveDS::~PassiveDS(){}
-void PassiveDS::set_damping_eigval(const double& lam0, const double& lam1){
-    if((lam0 > 0)&&(lam1 > 0)){
+void PassiveDS::set_damping_eigval(const double& lam0, const double& lam1, const double& lam2){
+    if((lam0 > 0)&&(lam1 > 0)&&(lam2 > 0)){
         eigVal0 = lam0;
         eigVal1 = lam1;
+        eigVal2 = lam2;
         damping_eigval(0,0) = eigVal0;
         damping_eigval(1,1) = eigVal1;
-        damping_eigval(2,2) = eigVal1;
+        damping_eigval(2,2) = eigVal2;
     }else{
         std::cerr << "wrong values for the eigenvalues"<<"\n";
     }
@@ -92,7 +93,7 @@ bool PassiveDSImpedanceController::init(hardware_interface::RobotHW* robot_hw,
 
   // *********  Subscribers   ********* //
   sub_desired_twist_ = node_handle.subscribe(
-      "/passiveDS/desired_twist", 20, &PassiveDSImpedanceController::desiredTwistCallback, this,
+      "/passiveDS/desired_lin_and_ori", 20, &PassiveDSImpedanceController::desiredTwistCallback, this,
       ros::TransportHints().reliable().tcpNoDelay());
 
   sub_desired_damping_  = node_handle.subscribe(
@@ -253,8 +254,9 @@ bool PassiveDSImpedanceController::init(hardware_interface::RobotHW* robot_hw,
   // Initialize Passive DS controller
   damping_eigval0_ = damping_eigvals_yaml_(0);
   damping_eigval1_ = damping_eigvals_yaml_(1);
-  passive_ds_controller = std::make_unique<PassiveDS>(100., 100.);
-  passive_ds_controller->set_damping_eigval(damping_eigval0_,damping_eigval1_);
+  damping_eigval2_ = damping_eigvals_yaml_(2);
+  passive_ds_controller = std::make_unique<PassiveDS>(100., 100., 100.);
+  passive_ds_controller->set_damping_eigval(damping_eigval0_,damping_eigval1_, damping_eigval2_);
 
 
   //**** Initialize ANGULAR PassiveDS params ****//
@@ -274,8 +276,8 @@ bool PassiveDSImpedanceController::init(hardware_interface::RobotHW* robot_hw,
   // Initialize Passive DS controller
   ang_damping_eigval0_ = ang_damping_eigvals_yaml_(0);
   ang_damping_eigval1_ = ang_damping_eigvals_yaml_(1);
-  ang_passive_ds_controller = std::make_unique<PassiveDS>(5., 5.);
-  ang_passive_ds_controller->set_damping_eigval(ang_damping_eigval0_,ang_damping_eigval1_);
+  ang_passive_ds_controller = std::make_unique<PassiveDS>(5., 5., 5.);
+  ang_passive_ds_controller->set_damping_eigval(ang_damping_eigval0_,ang_damping_eigval1_,ang_damping_eigval1_);
 
 
   // Initialize nullspace params
@@ -379,6 +381,7 @@ void PassiveDSImpedanceController::starting(const ros::Time& /*time*/) {
 
   real_damping_eigval0_        = damping_eigval0_;
   real_damping_eigval1_        = damping_eigval1_;
+  real_damping_eigval2_        = damping_eigval2_;
   desired_damp_eigval_cb_      = real_damping_eigval0_;
   desired_damp_eigval_cb_prev_ = real_damping_eigval0_;
   new_damping_msg_             = false;
@@ -463,25 +466,27 @@ void PassiveDSImpedanceController::update(const ros::Time& /*time*/,
   // Passive DS Impedance Contoller for Linear Velocity Error
   F_linear_des_.setZero();
 
-  real_damping_eigval0_ = damping_eigval0_; 
-  real_damping_eigval1_ = damping_eigval1_;
+  // real_damping_eigval0_ = damping_eigval0_; 
+  // real_damping_eigval1_ = damping_eigval1_;
+  // real_damping_eigval2_ = damping_eigval2_;
 
   // Change eigenvalues to the ones defined in the callback if given!
-  if (new_damping_msg_){
-    real_damping_eigval0_ = desired_damp_eigval_cb_; 
-    real_damping_eigval1_ = desired_damp_eigval_cb_;    
-  }
+  // if (new_damping_msg_){
+  //   real_damping_eigval0_ = desired_damp_eigval_cb_; 
+  //   real_damping_eigval1_ = desired_damp_eigval_cb_;    
+  // }
 
   // Reduce gains to 0 if desired velocity is not given or = 0
   real_damping_eigval0_ = velocity_d_.norm()<0.00001 ? 0.1 : real_damping_eigval0_;
   real_damping_eigval1_ = velocity_d_.norm()<0.00001 ? 0.1 : real_damping_eigval1_;
+  real_damping_eigval2_ = velocity_d_.norm()<0.00001 ? 0.1 : real_damping_eigval2_;
 
-  passive_ds_controller->set_damping_eigval(real_damping_eigval0_,real_damping_eigval1_);
+  passive_ds_controller->set_damping_eigval(real_damping_eigval0_,real_damping_eigval1_,real_damping_eigval2_);
   passive_ds_controller->update(dx_linear_msr_,dx_linear_des_);
   F_linear_des_ << passive_ds_controller->get_output(); 
   F_ee_des_.head(3) = F_linear_des_;
   
-  ROS_WARN_STREAM_THROTTLE(0.5, "Damping Eigenvalues:" << real_damping_eigval0_ << " " << real_damping_eigval0_);
+  ROS_WARN_STREAM_THROTTLE(0.5, "Damping Eigenvalues:" << real_damping_eigval0_ << " " << real_damping_eigval1_ << " " << real_damping_eigval2_);
   ROS_WARN_STREAM_THROTTLE(0.5, "PassiveDS Linear Force:" << F_ee_des_.head(3).norm());
   desired_damp_eigval_cb_prev_ = desired_damp_eigval_cb_;
 
@@ -598,15 +603,15 @@ void PassiveDSImpedanceController::passiveDSParamCallback(
   if (update_impedance_params_){
       damping_eigval0_ = config.damping_eigval0;
       damping_eigval1_ = config.damping_eigval1;
-      passive_ds_controller->set_damping_eigval(damping_eigval0_,damping_eigval1_);
+      passive_ds_controller->set_damping_eigval(damping_eigval0_,damping_eigval1_,damping_eigval1_);
 
   }
 }
 
 void PassiveDSImpedanceController::desiredTwistCallback(
-    const geometry_msgs::TwistConstPtr& msg) {
+    const geometry_msgs::PoseConstPtr& msg) {
 
-  velocity_d_      << msg->linear.x, msg->linear.y, msg->linear.z;
+  velocity_d_      << msg->position.x, msg->position.y, msg->position.z;
   last_cmd_time    = ros::Time::now().toSec();
 
   franka::RobotState robot_state = state_handle_->getRobotState();
@@ -617,16 +622,23 @@ void PassiveDSImpedanceController::desiredTwistCallback(
   double int_gain = 200;    
   position_d_target_ << position + velocity_d_*dt_call*int_gain; //Int_gain: Scaling to make it faster! (200 goes way faster than the desired    
 
+  orientation_d_target_.w() = msg->orientation.w;
+  orientation_d_target_.x() = msg->orientation.x;
+  orientation_d_target_.y() = msg->orientation.y;
+  orientation_d_target_.z() = msg->orientation.z;
 }
 
 void PassiveDSImpedanceController::desiredDampingCallback(
-    const std_msgs::Float32Ptr& msg) {
-    
-    desired_damp_eigval_cb_ =  msg->data;
-    ROS_WARN_STREAM_THROTTLE(0.5, "Desired damping eigval from callback:" << desired_damp_eigval_cb_);
+  const std_msgs::Float32MultiArrayPtr& msg) {
+  real_damping_eigval0_     =  msg->data[0];
+  real_damping_eigval1_     =  msg->data[1];
+  real_damping_eigval2_     =  msg->data[2];
 
-    last_msg_time    = ros::Time::now().toSec();
-    new_damping_msg_ = true;
+  // ROS_WARN_STREAM_THROTTLE(0.5, "Desired damping eigval from callback:" << desired_damp_eigval_cb_);
+  // ROS_WARN_STREAM_THROTTLE(0.5, "Desired angular damping eigval from callback:" << desired_ang_damp_eigval_cb_);
+
+  last_msg_time    = ros::Time::now().toSec();
+  new_damping_msg_ = true;
 }
 
 

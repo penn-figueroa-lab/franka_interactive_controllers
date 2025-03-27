@@ -52,8 +52,6 @@
     <node  pkg="rviz" type="rviz" output="screen" name="rviz" args="-d $(find franka_interactive_controllers)/launch/rviz/franka_description.rviz" if="$(arg bringup_rviz)"/>
   </group>
 
-  <include file="$(find constr_passive)/launch/control.launch" if="$(arg load_qp)"></include>
-
-  <include file="$(find natnet_ros_cpp)/launch/natnet_ros.launch"></include>
+  <include file="$(find constr_passive)/launch/control_withouteca.launch" if="$(arg load_qp)"></include>
 
 </launch>

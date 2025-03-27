@@ -16,10 +16,16 @@
 #include <pseudo_inversion.h>
 #include <hardware_interface/joint_command_interface.h>
 
+
+//std_msgs/Float32MultiArray
+
 namespace franka_interactive_controllers {
 
 bool JointGravityCompensationController::init(hardware_interface::RobotHW* robot_hw,
                                                ros::NodeHandle& node_handle) {
+
+  sub_control_signal = node_handle.subscribe("/joint_gravity_compensation_controller/Control_signals", 1000, &JointGravityCompensationController::controller_callback, this,
+      ros::TransportHints().reliable().tcpNoDelay());
 
   // Getting ROSParams
   std::string arm_id;
@@ -119,6 +125,10 @@ bool JointGravityCompensationController::init(hardware_interface::RobotHW* robot
   k_lock_      = 50; 
   q_locked_joints_.setZero();
 
+
+
+  tau_received = Eigen::VectorXd::Zero(7);
+
   return true;
 }
 
@@ -137,51 +147,49 @@ void JointGravityCompensationController::update(const ros::Time& /*time*/,
   // get state variables
   franka::RobotState robot_state = state_handle_->getRobotState();
   std::array<double, 7> coriolis_array = model_handle_->getCoriolis();
-  std::array<double, 42> jacobian_array =
-      model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
+  std::array<double, 7> gravity_array = model_handle_->getGravity();
+  std::array<double, 49> mass_array = model_handle_->getMass();
+  std::array<double, 42> jacobian_array = model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
 
   // convert to Eigen
+  Eigen::Map<Eigen::Matrix<double, 7, 7>> mass(mass_array.data());
   Eigen::Map<Eigen::Matrix<double, 7, 1>> coriolis(coriolis_array.data());
+  Eigen::Map<Eigen::Matrix<double, 7, 1>> gravity(gravity_array.data());
+
   Eigen::Map<Eigen::Matrix<double, 6, 7>> jacobian(jacobian_array.data());
   Eigen::Map<Eigen::Matrix<double, 7, 1>> q(robot_state.q.data());
   Eigen::Map<Eigen::Matrix<double, 7, 1>> dq(robot_state.dq.data());
   Eigen::Map<Eigen::Matrix<double, 7, 1>> tau_J_d(  // NOLINT (readability-identifier-naming)
       robot_state.tau_J_d.data());
+  Eigen::Map<Eigen::Matrix<double, 4,4>> end_T(robot_state.O_T_EE.data());
+  Eigen::Vector3d end_pos;
+  end_pos(0) = end_T(0, 3);
+  end_pos(1) = end_T(1, 3);
+  end_pos(2) = end_T(2, 3);
+  Eigen::Matrix<double, 6, 1> xdot_pre;
+  xdot_pre << jacobian*dq;
 
-  // compute control
+  /////////////////////////////////////////////////////////////////////
   // allocate variables
   Eigen::VectorXd tau_d(7), tau_task(7), tau_nullspace(7), tau_tool(7);
 
-  // pseudoinverse for nullspace handling kinematic pseudoinverse
-  Eigen::MatrixXd jacobian_transpose_pinv;
-  pseudoInverse(jacobian.transpose(), jacobian_transpose_pinv);
+  // // pseudoinverse for nullspace handling kinematic pseudoinverse
+  // Eigen::MatrixXd jacobian_transpose_pinv;
+  // pseudoInverse(jacobian.transpose(), jacobian_transpose_pinv);
 
   // Set 0 torques for the controller
   tau_task.setZero();
 
-  // Compute tool compensation (scoop/camera in scooping task)
-  if (activate_tool_compensation_)
-    tau_tool << jacobian.transpose() * tool_compensation_force_;
-  else
-    tau_tool.setZero();
-
-  if (activate_lock_joint6_){
-    double tau_task_6 = -k_lock_*(q[5] -  q_locked_joints_[5]) ;
-    std::cout << "tau_task_6: " << tau_task_6 << std::endl;
-    tau_task[5] = tau_task_6;
-  }
-
-  if (activate_lock_joint7_){
-    double tau_task_7 = -k_lock_*(q[6] -  q_locked_joints_[6]) ;
-    std::cout << "tau_task_7: " << tau_task_7 << std::endl;
-    tau_task[6] = tau_task_7;
-  }
-
+  // 
   // Desired torque (Check this.. might not be necessary)
-  tau_d << tau_task + coriolis - tau_tool;
+  //tau_d << tau_task + coriolis - tau_tool;
+  // printf("%f\n", tau_received[4]);
+  // std::cout << "I am re" << std::endl;
+  tau_d << tau_received;
 
   // Alternative 
   // tau_d.setZero();
+  //std::cout << "send torque" << std::endl;
 
   // Saturate torque rate to avoid discontinuities
   tau_d << saturateTorqueRate(tau_d, tau_J_d);
@@ -221,6 +229,16 @@ void JointGravityCompensationController::gravitycompensationParamCallback(
       q_locked_joints_ = q_locked_joints;
       ROS_INFO_STREAM("Locked Joints Set to: " << q_locked_joints_);
   }
+}
+
+void JointGravityCompensationController::controller_callback(const std_msgs::Float32MultiArray::ConstPtr& msg)
+{
+  // std::cout << "I am re" << std::endl;
+  for(int i = 0; i<7; i++)
+  {
+      tau_received[i] = msg->data[i];
+  }
+  // printf("%f\n", tau_received[4]);
 }
 
 

@@ -21,6 +21,9 @@
 #include <franka_hw/franka_model_interface.h>
 #include <franka_hw/franka_state_interface.h>
 
+#include <std_msgs/Float32MultiArray.h>
+#include <std_msgs/String.h>
+
 namespace franka_interactive_controllers {
 
 class JointGravityCompensationController : public controller_interface::MultiInterfaceController<
@@ -63,6 +66,13 @@ class JointGravityCompensationController : public controller_interface::MultiInt
   ros::NodeHandle dynamic_reconfigure_gravity_compensation_param_node_;
   void gravitycompensationParamCallback(franka_interactive_controllers::gravity_compensation_paramConfig& config,
                                uint32_t level);
+  void controller_callback(const std_msgs::Float32MultiArray::ConstPtr& msg);
+
+  ros::Publisher pub_state;
+  ros::Publisher pub_try;
+  ros::Subscriber sub_control_signal;
+  Eigen::VectorXd tau_received;
+
 };
 
 }  // namespace franka_interactive_controllers

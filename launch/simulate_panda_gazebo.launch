@@ -3,15 +3,15 @@
 
   <!-- Gazebo & GUI Configuration -->
   <arg name="gazebo"      default="true"  doc="Should the gazebo simulation be launched? Use false in case if you want to include this file and launch gazebo yourself" />
-  <arg name="headless"    default="false" doc="Should the gazebo GUI be launched?" />
+  <arg name="headless"    default="true" doc="Should the gazebo GUI be launched?" />
   <arg name="paused"      default="false" doc="Should the simulation directly be stopped at 0s?" />
   <arg name="world"       default="worlds/empty.world" doc="Filename to a SDF World for gazebo to use" />
   <arg name="rviz"        default="true" doc="Should RVIz be launched?" />
 
   <!-- Robot Customization -->
   <arg name="arm_id"      default="panda" doc="Name of the panda robot to spawn" />
-  <arg name="use_gripper" default="true"  doc="Should a franka hand be mounted on the flange?" />
-  <arg name="controller"  default="passiveDS_impedance"   doc="Which controller should be started? (One of {cartesian_pose, cartesian_twist, passiveDS}_impedance_controller )" />
+  <arg name="use_gripper" default="false"  doc="Should a franka hand be mounted on the flange?" />
+  <arg name="controller"  default="gravity_compensation"   doc="Which controller should be started? (One of {cartesian_pose, cartesian_twist, passiveDS}_impedance_controller )" />
   <arg name="x"           default="0"     doc="How far forward to place the base of the robot in [m]?" />
   <arg name="y"           default="0"     doc="How far leftwards to place the base of the robot in [m]?" />
   <arg name="z"           default="0"     doc="How far upwards to place the base of the robot in [m]?" />
@@ -22,16 +22,17 @@
   <arg name="initial_joint_positions"
        doc="Initial joint configuration of the panda. Specify as a list of name/value pairs in form of '-J [name-of-joint] [value-in-rad]'. Default is a 90 degree bend in the elbow"
        default="-J $(arg arm_id)_joint1 0
-                -J $(arg arm_id)_joint2 -0.1516284550464292
+                -J $(arg arm_id)_joint2 0.48598658122263144
                 -J $(arg arm_id)_joint3 0
-                -J $(arg arm_id)_joint4 -2.1602991589328693
-                -J $(arg arm_id)_joint5 0.0063609233109487425
-                -J $(arg arm_id)_joint6 2.030401506252017
-                -J $(arg arm_id)_joint7 0.8428664707532099
+                -J $(arg arm_id)_joint4 -1.2121057474316534
+                -J $(arg arm_id)_joint5 0
+                -J $(arg arm_id)_joint6 1.6981089110050012
+                -J $(arg arm_id)_joint7 0
                 -J $(arg arm_id)_finger_joint1 0.01
                 -J $(arg arm_id)_finger_joint2 0.01"
        />
-
+<!--[-0.04125446628949098, -0.2319, 0.03744, -2.104, 0.00453, 1.8887, 0.7968]-->
+<!--[0.48328086364371037, 0.2003571095748714, 0.7123594751441125, -2.240429000746111, -0.19041608722700434, 2.3838315841932163, 1.324765390708516]-->
   <include file="$(find gazebo_ros)/launch/empty_world.launch" if="$(arg gazebo)">
     <arg name="world_name" value="$(arg world)"/>
     <!-- Always start in paused mode, and only unpause when spawning the model -->
@@ -112,5 +113,11 @@
   <!-- Start only if passive_ds_impedance_controller is set in "controller"-->
   <include file="$(find franka_interactive_controllers)/launch/passiveDS_impedance_controller.launch" if="$(eval arg('controller') == 'passiveDS_impedance')">
   </include>
+
+  <include file="$(find franka_interactive_controllers)/launch/joint_gravity_compensation_controller.launch" if="$(eval arg('controller') == 'gravity_compensation')">
+  </include>
+
+
+  <include file="$(find constr_passive)/launch/control.launch"></include>
 
 </launch>

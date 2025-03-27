@@ -145,6 +145,7 @@ target_link_libraries(libfranka_joint_goal_motion_generator_mit franka_interacti
 
 
 
+
 ## Installation
 install(TARGETS franka_interactive_controllers
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
@@ -163,6 +164,8 @@ install(DIRECTORY config
 install(FILES franka_interactive_controllers_plugin.xml
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
+
+
 catkin_install_python(
   PROGRAMS scripts/interactive_marker.py 
   scripts/move_to_start.py 

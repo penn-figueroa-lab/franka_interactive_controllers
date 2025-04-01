@@ -200,6 +200,7 @@ class KinematicsUtils
 	  }
 
 	  T omega = acos(dotProduct);
+  	  ROS_WARN_STREAM_THROTTLE(0.5, "omega:" << omega);
 
 	  if(std::fabs(omega)<FLT_EPSILON)
 	  {
@@ -209,6 +210,7 @@ class KinematicsUtils
 	  {
 	    q = (std::sin((1-t)*omega)*q1+std::sin(t*omega)*q2)/std::sin(omega);
 	  }
+  	  ROS_WARN_STREAM_THROTTLE(0.5, "delta q:" << q);
 
 	  return q;
 	}

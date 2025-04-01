@@ -1,5 +1,6 @@
 # ***** Damping gains for the linear passive velocity control law ***** #
 linear_damping_eigenvalues:  [150, 150, 150] #Kuka experiments use 100!.. 150 for franka already tracks desired velocity quite well
+#linear_damping_eigenvalues:  [50, 50, 50] #Kuka experiments use 100!.. 150 for franka already tracks desired velocity quite well
 # linear_damping_eigenvalues:  [0., 0., 0.] #Kuka experiments use 100!.. 150 for franka already tracks desired velocity quite well
 # angular_damping_eigenvalues: [12., 12., 12.] # If activated in Yaml file it will use this for control during DS!
 angular_damping_eigenvalues: [8, 8, 8] # If activated in Yaml file it will use this for control during DS!
@@ -24,13 +25,14 @@ cartesian_stiffness_mode: 0 # Initial fallback stiffness mode 0: grav-comp, 1: s
 # nullspace_stiffness: 0.1 # With strong motions ROBOT WILL GET IN WEIRD CONFIGURATION WHEN DOING GRAV COMP
 nullspace_stiffness: 0.01 #Good behavior in REAL ROBOT MIT MUSEUM (This seems like the optimal stiffness)******
 # nullspace_stiffness: 0.5 #Good behavior in REAL ROBOT MIT MUSEUM (stays near nullspace while doing grav comp.. still a BIT Stiff)
-# nullspace_stiffness: 1.0 #Good behavior in REAL ROBOT MIT MUSEUM (stays near nullspace but becomes a bit stiff)
+# nullspace_stiffness: 3.0 #Good behavior in REAL ROBOT MIT MUSEUM (stays near nullspace but becomes a bit stiff)
+# nullspace_stiffness: 0.01 #Good behavior in REAL ROBOT MIT MUSEUM (stays near nullspace but becomes a bit stiff)
 
 # If leave commented, then will use q_initial as q_d_nullspace_
 # q_nullspace: [0.0, -0.1516284550464292, 0.0, -2.1602991589328693, 0.0063609233109487425, 2.030401506252017, 0.8428664707532099]
 
 # AT MIT MUSEUM
-q_nullspace: [0.005264432735087578, -0.17525178575515743, 0.08762187454773385, -1.8310899806440901, 0.029428643955124744, 1.680440888034793, 0.9123517645864205]
+q_nullspace: [0.0, -0.782617473542024, 0.0, -2.3432779050878536, 0.0, 1.5717350991679513, 0.7859488420270015]
 
 # ***** F_ext wrench to compensate for camera or tool mounted on end-effector ***** #
 external_tool_compensation: [0, 0, 0.0, 0, 0.0, 0.0] #Check F_ext

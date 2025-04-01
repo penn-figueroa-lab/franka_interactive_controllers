@@ -381,6 +381,13 @@ void PassiveDSImpedanceController::starting(const ros::Time& /*time*/) {
   real_damping_eigval1_        = damping_eigval1_;
   desired_damp_eigval_cb_      = real_damping_eigval0_;
   desired_damp_eigval_cb_prev_ = real_damping_eigval0_;
+
+  real_ang_damping_eigval0_    = ang_damping_eigval0_;
+  real_ang_damping_eigval1_    = ang_damping_eigval1_;
+  desired_ang_damp_eigval_cb_      = real_ang_damping_eigval0_;
+  desired_ang_damp_eigval_cb_prev_ = real_ang_damping_eigval0_;
+
+
   new_damping_msg_             = false;
 
 }
@@ -481,7 +488,7 @@ void PassiveDSImpedanceController::update(const ros::Time& /*time*/,
   F_linear_des_ << passive_ds_controller->get_output(); 
   F_ee_des_.head(3) = F_linear_des_;
   
-  // ROS_WARN_STREAM_THROTTLE(0.5, "Damping Eigenvalues:" << real_damping_eigval0_ << " " << real_damping_eigval0_);
+  ROS_WARN_STREAM_THROTTLE(0.5, "Real Damping Eigenvalues:" << real_damping_eigval0_ << " " << real_damping_eigval0_);
   // ROS_WARN_STREAM_THROTTLE(0.5, "PassiveDS Linear Force:" << F_ee_des_.head(3).norm());
   desired_damp_eigval_cb_prev_ = desired_damp_eigval_cb_;
 
@@ -509,15 +516,33 @@ void PassiveDSImpedanceController::update(const ros::Time& /*time*/,
   // double theta_gq = (-.5/(4*maxDq*maxDq)) * tmp_angular_vel.transpose() * tmp_angular_vel;
   // dx_angular_des_  = 2 * dsGain_ori*(1+std::exp(theta_gq)) * tmp_angular_vel;
 
+  // ROS_WARN_STREAM_THROTTLE(0.5, "temp_angVel:" << temp_angVel);
+  // ROS_WARN_STREAM_THROTTLE(0.5, "tmp_angular_vel:" << tmp_angular_vel);
+
   ROS_WARN_STREAM_THROTTLE(0.5, "Desired Angular Velocity Norm:" << dx_angular_des_.norm());
   ROS_WARN_STREAM_THROTTLE(0.5, "Current Angular Velocity Norm:" << dx_angular_msr_.norm());
 
   // Passive DS Impedance Contoller for Angular Velocity Error
+  real_ang_damping_eigval0_ = ang_damping_eigval0_; 
+  real_ang_damping_eigval1_ = ang_damping_eigval1_;
+
+  // Change eigenvalues to the ones defined in the callback if given!
+  if (new_damping_msg_){
+    real_ang_damping_eigval0_ = desired_ang_damp_eigval_cb_; 
+    real_ang_damping_eigval1_ = desired_ang_damp_eigval_cb_;    
+  }
+
+  // Reduce gains to 0 if desired velocity is not given or = 0
+  real_ang_damping_eigval0_ = dx_angular_des_.norm()<0.00001 ? 0.1 : real_ang_damping_eigval0_;
+  real_ang_damping_eigval1_ = dx_angular_des_.norm()<0.00001 ? 0.1 : real_ang_damping_eigval1_;
+  ang_passive_ds_controller->set_damping_eigval(real_ang_damping_eigval0_,real_ang_damping_eigval1_);
   ang_passive_ds_controller->update(dx_angular_msr_,dx_angular_des_);
   F_angular_des_ << ang_passive_ds_controller->get_output();
   F_ee_des_.tail(3) = F_angular_des_; 
-  ROS_WARN_STREAM_THROTTLE(0.5, "Ang. Damping Eigenvalues:" << ang_damping_eigval0_ << " " << ang_damping_eigval1_);
-  ROS_WARN_STREAM_THROTTLE(0.5, "PassiveDS Angular Force:" << F_ee_des_.tail(3).norm());
+  ROS_WARN_STREAM_THROTTLE(0.5, "Real Ang. Damping Eigenvalues:" << real_ang_damping_eigval0_ << " " << real_ang_damping_eigval1_);
+  // ROS_WARN_STREAM_THROTTLE(0.5, "PassiveDS Angular Force:" << F_ee_des_.tail(3).norm());
+
+  desired_ang_damp_eigval_cb_prev_ = desired_ang_damp_eigval_cb_;
 
   // Convert full control wrench to torque
   tau_task << jacobian.transpose() * F_ee_des_;
@@ -532,7 +557,7 @@ void PassiveDSImpedanceController::update(const ros::Time& /*time*/,
   pseudoInverse(jacobian.transpose(), jacobian_transpose_pinv);
 
   // nullspace PD control with damping ratio = 1
-  // ROS_WARN_STREAM_THROTTLE(0.5, "Nullspace stiffness:" << nullspace_stiffness_);
+  ROS_WARN_STREAM_THROTTLE(0.5, "Nullspace stiffness:" << nullspace_stiffness_);
 
   Eigen::VectorXd nullspace_stiffness_vec(7);
 
@@ -621,10 +646,12 @@ void PassiveDSImpedanceController::desiredTwistCallback(
 }
 
 void PassiveDSImpedanceController::desiredDampingCallback(
-    const std_msgs::Float32Ptr& msg) {
+    const std_msgs::Float32MultiArrayPtr& msg) {
     
-    desired_damp_eigval_cb_ =  msg->data;
-    // ROS_WARN_STREAM_THROTTLE(0.5, "Desired damping eigval from callback:" << desired_damp_eigval_cb_);
+    desired_damp_eigval_cb_ =  msg->data[0];
+    desired_ang_damp_eigval_cb_ = msg->data[1];
+    ROS_WARN_STREAM_THROTTLE(0.5, "Desired damping eigval from callback:" << desired_damp_eigval_cb_);
+    ROS_WARN_STREAM_THROTTLE(0.5, "Desired angular damping eigval from callback:" << desired_ang_damp_eigval_cb_);
 
     last_msg_time    = ros::Time::now().toSec();
     new_damping_msg_ = true;

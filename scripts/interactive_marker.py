@@ -21,6 +21,11 @@ position_limits = [[-0.6, 0.6], [-0.6, 0.6], [0.05, 0.9]]
 def publisherCallback(msg, link_name):
     marker_pose.header.frame_id = link_name
     marker_pose.header.stamp = rospy.Time(0)
+    rospy.loginfo_throttle(3.0, f"Quaternion:",
+                  f"x={marker_pose.pose.orientation.x}, "
+                  f"y={marker_pose.pose.orientation.y}, "
+                  f"z={marker_pose.pose.orientation.z}, "
+                  f"w={marker_pose.pose.orientation.w}")
     pose_pub.publish(marker_pose)
 
 

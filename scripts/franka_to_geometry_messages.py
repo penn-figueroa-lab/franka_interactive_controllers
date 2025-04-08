@@ -15,6 +15,7 @@ class FrankaStatesConverter:
         self.sub = rospy.Subscriber("/franka_state_controller/franka_states", FrankaState, self.convert_to_geometry_msg, queue_size=1, tcp_nodelay=True)
         self.pub_eeff        = rospy.Publisher("/franka_state_controller/O_T_EE", PoseStamped, queue_size=1)
         self.pub_ee_pose     = rospy.Publisher("/franka_state_controller/ee_pose", Pose, queue_size=1)
+        self.pub_ee_uni_gripper_pose     = rospy.Publisher("/franka_state_controller/ee_uni_gripper_pose", PoseStamped, queue_size=1)
         self.pub_eeff_flange = rospy.Publisher("/franka_state_controller/O_T_FL", PoseStamped, queue_size=1)
 
     @staticmethod
@@ -68,9 +69,28 @@ class FrankaStatesConverter:
         msg_o_t_fl.pose.orientation.z = quat_ee[2]
         msg_o_t_fl.pose.orientation.w = quat_ee[3]
 
+        # Uni-gripper pose
+        msg_o_t_ee_uni_gripper = PoseStamped()
+        msg_o_t_ee_uni_gripper.header.stamp = state_msg.header.stamp
+        msg_o_t_ee_uni_gripper.header.frame_id = "panda_link0"
+
+        ee_pos_world = np.array([O_T_EE[0, 3], O_T_EE[1, 3], O_T_EE[2, 3]])
+        ee_pos_offset = np.array([0.0, 0.0, 0.07])
+        ee_pos_gripper = ee_pos_world + O_T_EE[:3, :3] @ ee_pos_offset
+
+        # Copy position and orientation from end-effector pose
+        msg_o_t_ee_uni_gripper.pose.position.x = ee_pos_gripper[0]
+        msg_o_t_ee_uni_gripper.pose.position.y = ee_pos_gripper[1]
+        msg_o_t_ee_uni_gripper.pose.position.z = ee_pos_gripper[2]
+        msg_o_t_ee_uni_gripper.pose.orientation.x = quat_ee[0]
+        msg_o_t_ee_uni_gripper.pose.orientation.y = quat_ee[1]
+        msg_o_t_ee_uni_gripper.pose.orientation.z = quat_ee[2]
+        msg_o_t_ee_uni_gripper.pose.orientation.w = quat_ee[3]
+
         self.pub_eeff.publish(msg_o_t_ee)
         self.pub_ee_pose.publish(msg_ee_pose)
-        self.pub_eeff_flange.publish(msg_o_t_fl)
+        # self.pub_eeff_flange.publish(msg_o_t_fl)
+        self.pub_ee_uni_gripper_pose.publish(msg_o_t_ee_uni_gripper)
 
 
 if __name__ == '__main__':

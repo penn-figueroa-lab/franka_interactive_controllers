@@ -7,8 +7,23 @@
   <arg name="bringup_rviz"        default="true" />
   <arg name="load_franka_control" default="true" />
 
+  <!-- Static transform from mocap world to robot base -->
+  <!-- TODO: Calibrate this transform accurately! -->
+  <node pkg="tf2_ros" type="static_transform_publisher" name="static_transform_publisher_mocap_to_base" args="-2.51 0.65 0.90 0 0 0 mocap_world panda_link0" />
 
-
+  <!-- Node to calculate and publish Twist commands based on mocap handle pose -->
+  <node name="passive_ds_commander" pkg="franka_interactive_controllers" type="passive_ds_commander.py" output="screen">
+    <!-- Parameters for the commander node (can be overridden) -->
+    <param name="robot_base_frame" value="panda_link0"/>
+    <param name="mocap_world_frame" value="mocap_world"/>
+    <param name="handle_frame_id" value="mocap_world"/> <!-- Expected frame of incoming handle pose -->
+    <param name="handle_topic" value="/natnet_ros/DoorHandle/pose"/>
+    <param name="franka_ee_pose_topic" value="/franka_state_controller/ee_uni_gripper_pose"/>
+    <!-- <param name="linear_gain" value="1.5"/> -->
+    <!-- <param name="angular_gain" value="1.0"/> -->
+    <!-- <param name="max_linear_velocity" value="0.5"/> -->
+    <!-- <param name="max_angular_velocity" value="1.0"/> -->
+  </node>
 
   <!-- Bringup franka_interactive_bringup.launch and gravity compensation controller!-->
   <group if="$(arg load_franka_control)">

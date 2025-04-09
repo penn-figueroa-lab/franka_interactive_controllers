@@ -6,11 +6,8 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
-        - /Pose1
         - /TF1/Frames1
-        - /Marker1
-        - /Pose2
-      Splitter Ratio: 0.5
+      Splitter Ratio: 0.5011441707611084
     Tree Height: 531
   - Class: rviz/Selection
     Name: Selection
@@ -262,18 +259,34 @@ Visualization Manager:
       Value: true
     - Alpha: 1
       Axes Length: 0.10000000149011612
-      Axes Radius: 0.009999999776482582
+      Axes Radius: 0.05000000074505806
       Class: rviz/Pose
       Color: 255; 25; 0
       Enabled: true
       Head Length: 0.30000001192092896
       Head Radius: 0.10000000149011612
-      Name: Pose
+      Name: CabinetTop
       Queue Size: 10
       Shaft Length: 1
       Shaft Radius: 0.05000000074505806
       Shape: Axes
-      Topic: /passive_ds_commander/target_pose
+      Topic: /natnet_ros/CabinetTop/pose
+      Unreliable: false
+      Value: true
+    - Alpha: 1
+      Axes Length: 0.10000000149011612
+      Axes Radius: 0.05000000074505806
+      Class: rviz/Pose
+      Color: 255; 25; 0
+      Enabled: true
+      Head Length: 0.30000001192092896
+      Head Radius: 0.10000000149011612
+      Name: HandlePose
+      Queue Size: 10
+      Shaft Length: 1
+      Shaft Radius: 0.05000000074505806
+      Shape: Axes
+      Topic: /natnet_ros/DoorHandle/pose
       Unreliable: false
       Value: true
   Enabled: true
@@ -304,7 +317,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 1.2761728763580322
+      Distance: 1.4966217279434204
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -312,17 +325,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 0.040448784828186035
-        Y: -0.37818583846092224
-        Z: -0.030667472630739212
+        X: 0.05585135892033577
+        Y: -0.5543608069419861
+        Z: 0.13493622839450836
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.35539865493774414
+      Pitch: 0.6553986072540283
       Target Frame: <Fixed Frame>
-      Yaw: 0.05039430782198906
+      Yaw: 5.818575859069824
     Saved: ~
 Window Geometry:
   Displays:
@@ -341,4 +354,4 @@ Window Geometry:
     collapsed: true
   Width: 968
   X: 72
-  Y: 112
+  Y: 75

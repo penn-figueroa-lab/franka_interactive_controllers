@@ -11,6 +11,7 @@
 #include <controller_interface/multi_interface_controller.h>
 #include <dynamic_reconfigure/server.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/WrenchStamped.h>
 #include <hardware_interface/joint_command_interface.h>
 #include <hardware_interface/robot_hw.h>
 #include <ros/node_handle.h>
@@ -25,6 +26,13 @@
 #include <std_msgs/String.h>
 
 namespace franka_interactive_controllers {
+
+class LPF{
+    public:
+        explicit LPF(double a=0.1): a_(a), first_(true), y_(0) {}
+        double filt(double x){ if(first_){y_=x; first_=false;} y_+=a_*(x-y_); return y_;}
+    private: double a_, y_; bool first_;
+};
 
 class JointGravityCompensationController : public controller_interface::MultiInterfaceController<
                                                 franka_hw::FrankaModelInterface,
@@ -70,8 +78,13 @@ class JointGravityCompensationController : public controller_interface::MultiInt
 
   ros::Publisher pub_state;
   ros::Publisher pub_try;
+  ros::Publisher pub_ft;
   ros::Subscriber sub_control_signal;
   Eigen::VectorXd tau_received;
+
+
+  std::array<LPF, 7> lpf;
+  Eigen::Matrix<double, 7, 1> dq_prev;
 
 };
 

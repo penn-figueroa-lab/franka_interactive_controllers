@@ -27,6 +27,9 @@ bool JointGravityCompensationController::init(hardware_interface::RobotHW* robot
   sub_control_signal = node_handle.subscribe("/joint_gravity_compensation_controller/Control_signals", 1000, &JointGravityCompensationController::controller_callback, this,
       ros::TransportHints().reliable().tcpNoDelay());
 
+  pub_ft = node_handle.advertise<geometry_msgs::WrenchStamped>("/franka_ft", 10);
+  dq_prev.setZero();
+
   // Getting ROSParams
   std::string arm_id;
   if (!node_handle.getParam("arm_id", arm_id)) {
@@ -162,6 +165,31 @@ void JointGravityCompensationController::update(const ros::Time& /*time*/,
   Eigen::Map<Eigen::Matrix<double, 7, 1>> tau_J_d(  // NOLINT (readability-identifier-naming)
       robot_state.tau_J_d.data());
   Eigen::Map<Eigen::Matrix<double, 4,4>> end_T(robot_state.O_T_EE.data());
+  Eigen::Map<Eigen::Matrix<double, 7, 1>> tau_est(robot_state.tau_ext_hat_filtered.data());
+
+  
+  Eigen::VectorXd tau_dyn(7), tau_contact(7), wrench_contact_K(6), dq_filt(7), ddq(7);
+  for (auto i=0; i< 7; i++){
+    dq_filt(i) = lpf[i].filt(dq(i));
+  }
+
+  ddq = (dq_filt - dq_prev) / 0.001;
+  dq_prev = dq_filt;
+
+  tau_dyn = coriolis + mass * ddq;
+  tau_contact = tau_est - tau_dyn;
+  wrench_contact_K = jacobian.transpose().completeOrthogonalDecomposition().solve(tau_contact);
+  
+  geometry_msgs::WrenchStamped wrench_msg;
+  wrench_msg.header.stamp = ros::Time::now();
+  wrench_msg.header.frame_id = "panda_K";
+  wrench_msg.wrench.force.x = wrench_contact_K(0);
+  wrench_msg.wrench.force.y = wrench_contact_K(1);
+  wrench_msg.wrench.force.z = wrench_contact_K(2);
+
+  pub_ft.publish(wrench_msg);
+
+
   Eigen::Vector3d end_pos;
   end_pos(0) = end_T(0, 3);
   end_pos(1) = end_T(1, 3);

@@ -8,9 +8,11 @@
 #include <iterator>
 #include <mutex>
 #include <thread>
+#include <std_msgs/String.h>
 
 #include <franka/duration.h>
 #include <franka/exception.h>
+#include <franka/gripper.h>
 #include <franka/model.h>
 #include <franka/rate_limiting.h>
 #include <franka/robot.h>
@@ -20,6 +22,8 @@
 #include <libfranka_joint_motion_generator.h>
 
 #include "ros/ros.h"
+#include <std_msgs/Float32MultiArray.h>
+#include <sensor_msgs/JointState.h>
 
 namespace {
 template <class T, size_t N>
@@ -32,22 +36,49 @@ std::ostream& operator<<(std::ostream& ostream, const std::array<T, N>& array) {
 }
 }  // anonymous namespace
 
+std::string latest_command = "none";
+void commandCallback(const std_msgs::String::ConstPtr& msg) {
+  latest_command = msg->data;
+}
+
+std::mutex mtx;
+std::array<double, 7> latest_q_goal = {{0, -M_PI_4, 0, -3 * M_PI_4, 0, M_PI_2, M_PI_4}};
+float latest_gripper_width = 0.0;
+bool new_goal_available = false;
+
+void goalCallback(const std_msgs::Float32MultiArray::ConstPtr& msg) {
+  // if (msg->data.size() != 8) {
+  //   ROS_WARN("Received joint goal with size %lu, expected 8", msg->data.size());
+  //   return;
+  // }
+
+  std::lock_guard<std::mutex> lock(mtx);
+  for (size_t i = 0; i < 7; ++i) {
+    latest_q_goal[i] = msg->data[i];
+  }
+  // latest_gripper_width = msg->data[7];
+  new_goal_available = true;
+}
+
 int main(int argc, char** argv) {
 
-  // ros::init(argc, argv, "franka_joint_goal_motion_generator_node");
-  // ros::NodeHandle nh;
+  ros::init(argc, argv, "franka_joint_goal_motion_generator_node");
+  ros::NodeHandle nh;
+  ros::Subscriber command_sub = nh.subscribe("string_command_topic", 10, commandCallback);
+  ros::Subscriber goal_sub = nh.subscribe("/pizero/action", 1, goalCallback);
+
+  ros::Publisher joint_state_pub = nh.advertise<sensor_msgs::JointState>("/franka_state_controller/joint_states", 10);
+
+
   // ros::NodeHandle _nh("~");
   std::string franka_ip = "172.16.0.2";
 
-  // Check whether the required arguments were passed replace this with rosparam!
-  if (argc != 2) {
-    std::cerr << "Usage: " << argv[0] << " <goal_id>" << std::endl;
-    return -1;
-  }
+
 
   try {
     // Connect to robot.
     franka::Robot robot(franka_ip);
+    franka::Gripper gripper(franka_ip);
 
     // Set additional parameters always before the control loop, NEVER in the control loop!
     // Set collision behavior.
@@ -57,48 +88,46 @@ int main(int argc, char** argv) {
         {{20.0, 20.0, 20.0, 20.0, 20.0, 20.0}}, {{20.0, 20.0, 20.0, 20.0, 20.0, 20.0}},
         {{10.0, 10.0, 10.0, 10.0, 10.0, 10.0}}, {{10.0, 10.0, 10.0, 10.0, 10.0, 10.0}});
 
-    // First move the robot to a suitable joint configuration
-    int goal_id = std::stod(argv[1]);
-
-    std::array<double, 7> q_goal = {{0, -M_PI_4, 0, -3 * M_PI_4, 0, M_PI_2, M_PI_4}};
-    switch(goal_id) {
-       case 1  :
-          std::cout << "Selected q_home as goal" << std::endl;
-          q_goal = {{0, -M_PI_4, 0, -3 * M_PI_4, 0, M_PI_2, M_PI_4}};
-          break;
-       case 2  :
-        std::cout << "Selected q_init_scoop as goal" << std::endl;
-          q_goal = {{-0.2587090488839568, -0.18067890287296676, -0.1481914834306951, -2.2218669233824073, 1.2397120203356886, 1.6055843360223088, -0.2564202219950203}};
-          break;
-       case 3  :
-        std::cout << "Selected q_right_plate as goal" << std::endl;
-          q_goal = {{-0.5133883270192566, 0.2710828751293255, -0.300302759789584, -1.807947067027922, 1.3988803114257669, 1.3803889200108581, -0.31572859715720264}};
-          break;
-
-       case 4  :
-        std::cout << "Selected q_center_plate as goal" << std::endl;
-          q_goal = {{-0.1478659114867632, 0.20867810028895994, -0.3032390865134677, -2.0419724096954726, 1.4192992324987155, 1.480286537010783, -0.4761567130958154}};
-          break;
-
-       case 5  :
-        std::cout << "Selected q_left_table_setting as goal" << std::endl;
-        q_goal = {{-0.024844449233219813, 0.21341741475306059, 0.1671374870475969, -1.9734624159963505, 1.6724220574752517, 2.054275230565774, -0.36437520284810354}};
-        break;           
-
-       case 6 :
-        std::cout << "Selected q_left_table_setting as goal" << std::endl;
-        q_goal = {{-0.3359993156361998, -0.1753333669566437, 0.2292614262647741, -1.941019418460696, 0.08810859725369569, 1.9533451146157188, 0.7877697710477642}};
-        break;
-
-    }
   
-    MotionGenerator motion_generator(0.6, q_goal);
-    std::cout << "WARNING: This example will move the robot! "
-              << "Please make sure to have the user stop button at hand!" << std::endl
-              << "Press Enter to continue..." << std::endl;
-    std::cin.ignore();
-    robot.control(motion_generator);
-    std::cout << "Finished moving to initial joint configuration." << std::endl;
+    while (ros::ok()) {
+      ros::spinOnce();
+
+      // Publish joint state
+      franka::RobotState state = robot.readOnce();
+
+      sensor_msgs::JointState joint_msg;
+      joint_msg.header.stamp = ros::Time::now();
+      joint_msg.name = {
+        "panda_joint1", "panda_joint2", "panda_joint3", 
+        "panda_joint4", "panda_joint5", "panda_joint6", "panda_joint7"
+      };
+      joint_msg.position = std::vector<double>(state.q.begin(), state.q.end());
+      joint_msg.velocity = std::vector<double>(state.dq.begin(), state.dq.end());
+      joint_msg.effort   = std::vector<double>(state.tau_J.begin(), state.tau_J.end());
+      joint_state_pub.publish(joint_msg);
+    
+      std::array<double, 7> current_goal;
+      {
+        std::lock_guard<std::mutex> lock(mtx);
+        if (!new_goal_available) {
+          std::this_thread::sleep_for(std::chrono::milliseconds(100));
+          continue;
+        }
+        current_goal = latest_q_goal;
+        new_goal_available = false;
+      }
+      std::cout << "AFTER Latest string command: " << latest_command << std::endl;
+      
+    
+      std::cout << "Received and executing joint goal: ";
+      for (size_t i = 0; i < current_goal.size(); ++i) {
+        std::cout << current_goal[i] << (i < current_goal.size() - 1 ? ", " : "\n");
+      }
+      std::cout << "gripper width: " << latest_gripper_width << std::endl;
+      MotionGenerator motion_generator(0.5, current_goal);
+      robot.control(motion_generator);
+      bool success = gripper.move(latest_gripper_width, 0.1);
+    }
 
   } catch (const franka::Exception& ex) {
     std::cerr << ex.what() << std::endl;

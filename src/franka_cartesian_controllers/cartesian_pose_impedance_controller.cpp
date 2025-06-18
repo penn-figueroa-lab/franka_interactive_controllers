@@ -27,6 +27,9 @@ bool CartesianPoseImpedanceController::init(hardware_interface::RobotHW* robot_h
       "/cartesian_impedance_controller/desired_pose", 20, &CartesianPoseImpedanceController::desiredPoseCallback, this,
       ros::TransportHints().reliable().tcpNoDelay());
 
+  pub_ft = node_handle.advertise<geometry_msgs::WrenchStamped>("/franka_ft", 10);
+  dq_prev.setZero();
+
   // Getting ROSParams
   std::string arm_id;
   if (!node_handle.getParam("arm_id", arm_id)) {
@@ -212,8 +215,10 @@ void CartesianPoseImpedanceController::update(const ros::Time& /*time*/,
   std::array<double, 42> jacobian_array =
       model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
   std::array<double, 7> gravity_array = model_handle_->getGravity();
+  std::array<double, 49> mass_array = model_handle_->getMass();
 
   // convert to Eigen
+  Eigen::Map<Eigen::Matrix<double, 7, 7>> mass(mass_array.data());
   Eigen::Map<Eigen::Matrix<double, 7, 1>> coriolis(coriolis_array.data());
   Eigen::Map<Eigen::Matrix<double, 7, 1>> gravity(gravity_array.data());
   Eigen::Map<Eigen::Matrix<double, 6, 7>> jacobian(jacobian_array.data());
@@ -224,6 +229,31 @@ void CartesianPoseImpedanceController::update(const ros::Time& /*time*/,
   Eigen::Affine3d transform(Eigen::Matrix4d::Map(robot_state.O_T_EE.data()));
   Eigen::Vector3d position(transform.translation());
   Eigen::Quaterniond orientation(transform.linear());
+
+
+  Eigen::Map<Eigen::Matrix<double, 7, 1>> tau_est(robot_state.tau_ext_hat_filtered.data());
+
+  
+  Eigen::VectorXd tau_dyn(7), tau_contact(7), wrench_contact_K(6), dq_filt(7), ddq(7);
+  for (auto i=0; i< 7; i++){
+    dq_filt(i) = lpf[i].filt(dq(i));
+  }
+
+  ddq = (dq_filt - dq_prev) / 0.001;
+  dq_prev = dq_filt;
+
+  tau_dyn = coriolis + mass * ddq;
+  tau_contact = tau_est - tau_dyn;
+  wrench_contact_K = jacobian.transpose().completeOrthogonalDecomposition().solve(tau_contact);
+  
+  geometry_msgs::WrenchStamped wrench_msg;
+  wrench_msg.header.stamp = ros::Time::now();
+  wrench_msg.header.frame_id = "panda_K";
+  wrench_msg.wrench.force.x = wrench_contact_K(0);
+  wrench_msg.wrench.force.y = wrench_contact_K(1);
+  wrench_msg.wrench.force.z = wrench_contact_K(2);
+
+  pub_ft.publish(wrench_msg);
 
 
   //////////////////////////////////////////////////////////////////////////////////////////////////

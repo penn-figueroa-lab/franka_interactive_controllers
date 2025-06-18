@@ -173,6 +173,7 @@ catkin_install_python(
   scripts/franka_to_geometry_messages.py
   scripts/franka_gui_gripper_run.py
   scripts/oculus_teleop.py
+  scripts/haply_teleop.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

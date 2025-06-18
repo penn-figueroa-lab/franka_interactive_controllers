@@ -9,6 +9,7 @@
 #include <controller_interface/multi_interface_controller.h>
 #include <dynamic_reconfigure/server.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/WrenchStamped.h>
 #include <hardware_interface/joint_command_interface.h>
 #include <hardware_interface/robot_hw.h>
 #include <ros/node_handle.h>
@@ -20,6 +21,13 @@
 #include <franka_hw/franka_state_interface.h>
 
 namespace franka_interactive_controllers {
+
+class LPF{
+    public:
+        explicit LPF(double a=0.1): a_(a), first_(true), y_(0) {}
+        double filt(double x){ if(first_){y_=x; first_=false;} y_+=a_*(x-y_); return y_;}
+    private: double a_, y_; bool first_;
+};
 
 class CartesianPoseImpedanceController : public controller_interface::MultiInterfaceController<
                                                 franka_hw::FrankaModelInterface,
@@ -72,6 +80,10 @@ class CartesianPoseImpedanceController : public controller_interface::MultiInter
   // Desireds pose subscriber
   ros::Subscriber sub_desired_pose_;
   void desiredPoseCallback(const geometry_msgs::PoseStampedConstPtr& msg);
+
+  ros::Publisher pub_ft;
+  std::array<LPF, 7> lpf;
+  Eigen::Matrix<double, 7, 1> dq_prev;
 };
 
 }  // namespace franka_interactive_controllers

@@ -9,6 +9,7 @@
 #include <controller_interface/multi_interface_controller.h>
 #include <dynamic_reconfigure/server.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/WrenchStamped.h>
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/Twist.h>
 #include <std_msgs/Int32.h>
@@ -29,6 +30,13 @@
 #include <dynamic_reconfigure/server.h>
 
 namespace franka_interactive_controllers {
+
+class LPF{
+    public:
+        explicit LPF(double a=0.1): a_(a), first_(true), y_(0) {}
+        double filt(double x){ if(first_){y_=x; first_=false;} y_+=a_*(x-y_); return y_;}
+    private: double a_, y_; bool first_;
+};
 
 //*************************************************************************************
 // PassiveDS Class taken from https://github.com/epfl-lasa/dual_iiwa_toolkit.git
@@ -185,6 +193,10 @@ class PassiveDSImpedanceController : public controller_interface::MultiInterface
   ros::Subscriber sub_desired_damping_;
   void desiredTwistCallback(const geometry_msgs::PoseConstPtr& msg);
   void desiredDampingCallback(const std_msgs::Float32MultiArrayPtr& msg); // In case damping values want to be changed!
+
+  ros::Publisher pub_ft;
+  std::array<LPF, 7> lpf;
+  Eigen::Matrix<double, 7, 1> dq_prev;
 
 };
 

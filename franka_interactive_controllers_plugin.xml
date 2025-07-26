@@ -4,6 +4,11 @@
       A controller that send 0 torques to the robot + coriolis + external tool compensation + nullspace tracking if desired. Nullspace stiffness can be modified onlive via dynamic reconfigure and external tool compensation forces should be defined in .yaml file in ./config folder.
     </description>
   </class>
+  <class name="franka_interactive_controllers/JointFactrController" type="franka_interactive_controllers::JointFactrController" base_class_type="controller_interface::ControllerBase">
+    <description>
+      A controller that allows Factr teleoperation to perform joint position control.
+    </description>
+  </class>
   <class name="franka_interactive_controllers/CartesianPoseImpedanceController" type="franka_interactive_controllers::CartesianPoseImpedanceController" base_class_type="controller_interface::ControllerBase">
     <description>
       A controller that renders a spring damper system in cartesian space. Compliance parameters with the dynamic reconfigure and the desired/equilibrium pose can be modified online via an interactive marker or by publishing a geometry_msg Pose to "/cartesian_impedance_controller/desired_pose".

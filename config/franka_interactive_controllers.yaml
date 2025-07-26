@@ -47,6 +47,18 @@ joint_gravity_compensation_controller:
         - panda_joint6
         - panda_joint7
 
+joint_factr_controller:
+    type: franka_interactive_controllers/JointFactrController
+    arm_id: panda
+    joint_names:
+        - panda_joint1
+        - panda_joint2
+        - panda_joint3
+        - panda_joint4
+        - panda_joint5
+        - panda_joint6
+        - panda_joint7
+
 
 joint_position_franka_controller:
     type: franka_interactive_controllers/JointPositionFrankaController

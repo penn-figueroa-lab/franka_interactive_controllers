@@ -2,12 +2,13 @@
 <launch>
   <arg name="robot_ip"            default="172.16.0.2"/>
   <arg name="load_gripper"        default="false" />
-  <arg name="use_gripper_gui"     default="false" />
+  <arg name="use_gripper_gui"     default="true" />
   <arg name="controller"          default="cartesian_pose_impedance"   doc="Which controller should be started? (One of {cartesian_pose, cartesian_twist, passiveDS}_impedance_controller )" />
   <arg name="bringup_rviz"        default="true" />
   <arg name="load_franka_control" default="true" />
   <arg name="load_qp"             default="false" />
   <arg name="oculus"              default="true"  />
+  <arg name="move_test"           default="false"  />
 
 
 
@@ -35,6 +36,9 @@
 
     <include file="$(find franka_interactive_controllers)/launch/joint_gravity_compensation_controller.launch" if="$(eval arg('controller') == 'gravity_compensation')">
     </include>
+
+    <include file="$(find franka_interactive_controllers)/launch/joint_factr_controller.launch" if="$(eval arg('controller') == 'factr')">
+    </include>
   </group>
 
 
@@ -58,5 +62,9 @@
   <group if="$(arg oculus)">
     <node name="oculus_cartesian_teleop" pkg="franka_interactive_controllers" type="oculus_teleop.py" respawn="false" output="screen"/>
   </group>
+
+  <!-- <group if="$(arg move_test)">
+    <node name="move_test" pkg="franka_interactive_controllers" type="move_test.py" respawn="false" output="screen"/>
+  </group> -->
 
 </launch>

@@ -72,6 +72,7 @@ set(H_FILES ${INCLUDE_DIR}/franka_cartesian_controllers/cartesian_pose_impedance
             ${INCLUDE_DIR}/franka_joint_controllers/joint_impedance_franka_controller.h
             ${INCLUDE_DIR}/franka_joint_controllers/joint_position_franka_controller.h
             ${INCLUDE_DIR}/franka_joint_controllers/joint_velocity_franka_controller.h            
+            ${INCLUDE_DIR}/franka_joint_controllers/joint_factr_controller.h
             ${INCLUDE_DIR}/franka_motion_generators/libfranka_joint_motion_generator.h
             ${INCLUDE_DIR}/franka_utils/pseudo_inversion.h
             ${INCLUDE_DIR}/franka_utils/kinematics_utils.hpp)
@@ -95,6 +96,7 @@ set(SRCS
   src/franka_joint_controllers/joint_position_franka_controller.cpp
   src/franka_joint_controllers/joint_velocity_franka_controller.cpp
   src/franka_joint_controllers/joint_impedance_franka_controller.cpp
+  src/franka_joint_controllers/joint_factr_controller.cpp
   src/franka_motion_generators/libfranka_joint_motion_generator.cpp)
 
 add_library(franka_interactive_controllers ${H_FILES} ${SRCS})
@@ -174,6 +176,7 @@ catkin_install_python(
   scripts/franka_gui_gripper_run.py
   scripts/oculus_teleop.py
   scripts/haply_teleop.py
+  scripts/move_test.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

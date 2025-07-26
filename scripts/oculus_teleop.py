@@ -256,7 +256,7 @@ class VRPolicy:
         self,
         right_controller: bool = True,
         max_lin_vel: float = 5.0,
-        max_rot_vel: float = 12.0,
+        max_rot_vel: float = 24.0,
         max_gripper_vel: float = 1.0,
         spatial_coeff: float = 1.0,
         pos_action_gain: float = 5.0*20.0,
@@ -327,15 +327,23 @@ class VRPolicy:
 
             stop_updating = (buttons[self.controller_id.upper()+"J"] or
                              buttons[self.controller_id.upper()+"G"])
+            
             if self.reset_orientation:
                 rot_mat = np.asarray(poses[self.controller_id])
                 if stop_updating:
                     self.reset_orientation = False
                 try:
                     rot_mat = np.linalg.inv(rot_mat)
-                except:
+                except Exception:
                     rot_mat = np.eye(4)
                     self.reset_orientation = True
+                R_YAW_180 = np.array([[-1.,  0.,  0., 0.],   # 180° about +Z
+                                    [ 0., -1.,  0., 0.],
+                                    [ 0.,  0.,  1., 0.],
+                                    [ 0.,  0.,  0., 1.]])
+                # --- flip VR‑room so that +x/+y become –x/–y in robot frame ----
+                rot_mat = R_YAW_180 @ rot_mat          #  ←  add this line
+                # ---------------------------------------------------------------
                 self.vr_to_global_mat = rot_mat
 
     def _process_reading(self):
@@ -432,6 +440,10 @@ class VRTeleopNode:
         }
 
     def _spin(self):
+
+        facing_robot = True
+
+
         rate = rospy.Rate(50)
         dt = 1.0 / 50.0
         while not rospy.is_shutdown():
@@ -444,6 +456,12 @@ class VRTeleopNode:
             curr_eul = self.current_state["cartesian_position"][3:]
             curr_R   = R.from_euler('xyz', curr_eul, degrees=False)
 
+            # if facing_robot:
+            #     action[0] = -action[0]
+            #     action[1] = -action[1]
+            #     action[3] = -action[3]
+            #     action[4] = -action[4]
+            
             dpos     = action[:3] * dt
             drot     = R.from_rotvec(action[3:6] * dt)
             desired_R = drot * curr_R

@@ -177,6 +177,7 @@ catkin_install_python(
   scripts/oculus_teleop.py
   scripts/haply_teleop.py
   scripts/move_test.py
+  scripts/move_ee_traj.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

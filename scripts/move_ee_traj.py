@@ -122,7 +122,7 @@ LAMBDA_NOR = 3.0         # cost orthogonal
 BETA_FAR   = 0.15         # (m) influence radius
 K_R        = 4.0          # orientation gain (rad/s)
 MAX_LIN_V  = 0.45         # (m/s) velocity clip
-MAX_ANG_V  = 1.5          # (rad/s) angular velocity clip
+MAX_ANG_V  = 1.0          # (rad/s) angular velocity clip
 PUB_RATE   = 100          # (Hz)
 LOOKAHEAD = 0.07          # metres ahead of s*   (tune 2-5 cm)
 GAIN      = 90.0           # 1/s – converts gap → velocity
@@ -213,20 +213,41 @@ class GFabricVelNode:
         p_cmd = np.array(splev(s_cmd, self.pos_spline))
         v_lin += GAIN * (p_cmd - x)
 
+        # Scale max velocity based on distance to goal to prevent oscillation
+        goal_pos = np.array(splev(1.0, self.pos_spline))
+        dist_to_goal = np.linalg.norm(goal_pos - x)
+        print("Distance to goal: %.3f m" % dist_to_goal)
+        SLOWDOWN_THRESHOLD = 0.04  # Start slowing down when within 3cm of goal
+        MIN_VELOCITY_SCALE = 0.8  # Minimum velocity scale factor
+        
+        if dist_to_goal < SLOWDOWN_THRESHOLD:
+            # Exponential decay: slow at beginning, fast at end
+            normalized_dist = dist_to_goal / SLOWDOWN_THRESHOLD  # 0 to 1
+            velocity_scale = max(MIN_VELOCITY_SCALE, normalized_dist ** 3)
+            scaled_max_lin_v = MAX_LIN_V * velocity_scale
+        else:
+            scaled_max_lin_v = MAX_LIN_V
+
         speed = np.linalg.norm(v_lin)
-        if speed > MAX_LIN_V:
-            v_lin *= MAX_LIN_V / speed
+        if speed > scaled_max_lin_v:
+            v_lin *= scaled_max_lin_v / speed
 
         idx = np.argmin(np.abs(self.s_grid - s_cmd))      # integer 0 … ORI_SAMPLES-1
         q_des = self.quat_grid[idx]                       # (x, y, z, w)
+        # R_des = R.from_quat(q_des)
+
+        # rot_err_vec = (R_curr.inv() * R_des).as_rotvec()  # SO(3) log
+        # v_ang = K_R * rot_err_vec
+        # if np.linalg.norm(v_ang) > MAX_ANG_V:
+        #     v_ang *= MAX_ANG_V / np.linalg.norm(v_ang)
 
         # 5. publish velocity & orientation
+
         print("s*: %.3f, dist: %.3f, v_lin: [%.3f, %.3f, %.3f]" %
               (s_star, dist, v_lin[0], v_lin[1], v_lin[2]))
         msg = Pose()
         msg.position.x, msg.position.y, msg.position.z = map(float, v_lin)
 
-        print(q_des)
         #q_des = [1.0, 0.0, 0.0, 0.0]  # default quaternion
         msg.orientation.x, msg.orientation.y, msg.orientation.z, msg.orientation.w = \
             map(float, q_des)

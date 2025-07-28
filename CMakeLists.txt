@@ -178,6 +178,8 @@ catkin_install_python(
   scripts/haply_teleop.py
   scripts/move_test.py
   scripts/move_ee_traj.py
+  scripts/geometric_fabrics.py
+  scripts/waypoint_runner.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

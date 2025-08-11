@@ -433,7 +433,7 @@ void PassiveDSImpedanceController::update(const ros::Time& /*time*/,
 
   // Check damping message command
   if(ros::Time::now().toSec() - last_msg_time > vel_cmd_timeout){
-    ROS_WARN_STREAM_THROTTLE(1, "No new damping message! Setting it to default values");
+    ROS_WARN_STREAM_THROTTLE(10, "No new damping message! Setting it to default values");
     new_damping_msg_ = false;
   }
 
@@ -488,7 +488,7 @@ void PassiveDSImpedanceController::update(const ros::Time& /*time*/,
   F_linear_des_ << passive_ds_controller->get_output(); 
   F_ee_des_.head(3) = F_linear_des_;
   
-  ROS_WARN_STREAM_THROTTLE(0.5, "Real Damping Eigenvalues:" << real_damping_eigval0_ << " " << real_damping_eigval0_);
+  // ROS_WARN_STREAM_THROTTLE(0.5, "Real Damping Eigenvalues:" << real_damping_eigval0_ << " " << real_damping_eigval0_);
   // ROS_WARN_STREAM_THROTTLE(0.5, "PassiveDS Linear Force:" << F_ee_des_.head(3).norm());
   desired_damp_eigval_cb_prev_ = desired_damp_eigval_cb_;
 
@@ -519,8 +519,8 @@ void PassiveDSImpedanceController::update(const ros::Time& /*time*/,
   // ROS_WARN_STREAM_THROTTLE(0.5, "temp_angVel:" << temp_angVel);
   // ROS_WARN_STREAM_THROTTLE(0.5, "tmp_angular_vel:" << tmp_angular_vel);
 
-  ROS_WARN_STREAM_THROTTLE(0.5, "Desired Angular Velocity Norm:" << dx_angular_des_.norm());
-  ROS_WARN_STREAM_THROTTLE(0.5, "Current Angular Velocity Norm:" << dx_angular_msr_.norm());
+  // ROS_WARN_STREAM_THROTTLE(0.5, "Desired Angular Velocity Norm:" << dx_angular_des_.norm());
+  // ROS_WARN_STREAM_THROTTLE(0.5, "Current Angular Velocity Norm:" << dx_angular_msr_.norm());
 
   // Passive DS Impedance Contoller for Angular Velocity Error
   real_ang_damping_eigval0_ = ang_damping_eigval0_; 
@@ -539,7 +539,7 @@ void PassiveDSImpedanceController::update(const ros::Time& /*time*/,
   ang_passive_ds_controller->update(dx_angular_msr_,dx_angular_des_);
   F_angular_des_ << ang_passive_ds_controller->get_output();
   F_ee_des_.tail(3) = F_angular_des_; 
-  ROS_WARN_STREAM_THROTTLE(0.5, "Real Ang. Damping Eigenvalues:" << real_ang_damping_eigval0_ << " " << real_ang_damping_eigval1_);
+  // ROS_WARN_STREAM_THROTTLE(0.5, "Real Ang. Damping Eigenvalues:" << real_ang_damping_eigval0_ << " " << real_ang_damping_eigval1_);
   // ROS_WARN_STREAM_THROTTLE(0.5, "PassiveDS Angular Force:" << F_ee_des_.tail(3).norm());
 
   desired_ang_damp_eigval_cb_prev_ = desired_ang_damp_eigval_cb_;
@@ -556,21 +556,39 @@ void PassiveDSImpedanceController::update(const ros::Time& /*time*/,
   Eigen::MatrixXd jacobian_transpose_pinv;
   pseudoInverse(jacobian.transpose(), jacobian_transpose_pinv);
 
+  // Compute end effector distance to base and set nullspace joint 1 direction
+  double ee_x_distance = position.x();  // x distance from base to end effector
+  double ee_y_distance = position.y();  // y distance from base to end effector
+  double ee_distance_xy = sqrt(ee_x_distance * ee_x_distance + ee_y_distance * ee_y_distance);
+  
+  // Compute desired angle for first joint (base rotation) to point towards end effector
+  double desired_base_angle = atan2(ee_y_distance, ee_x_distance + 1e-6);  // Adding a small value to avoid division by zero
+  
+  // Set the first joint's desired nullspace position to align with end effector direction
+  q_d_nullspace_(0) = desired_base_angle;
+  
+  // ROS_INFO_STREAM_THROTTLE(0.5, "EE distance to base - X: " << ee_x_distance << " Y: " << ee_y_distance << " XY: " << ee_distance_xy);
+  // ROS_INFO_STREAM_THROTTLE(0.5, "Desired base angle (q1): " << desired_base_angle << " rad (" << desired_base_angle * 180.0 / M_PI << " deg)");
+  // ROS_INFO_STREAM_THROTTLE(0.5, "Desired nullspace position (q_d_nullspace_): " << q_d_nullspace_(0) << " rad (" 
+  //                       << q_d_nullspace_(0) * 180.0 / M_PI << " deg)");
+  // ROS_INFO_STREAM_THROTTLE(0.5, "Current joint positions (q): " << q(0) << " rad (" 
+  //                       << q(0) * 180.0 / M_PI << " deg)");
+  
   // nullspace PD control with damping ratio = 1
-  ROS_WARN_STREAM_THROTTLE(0.5, "Nullspace stiffness:" << nullspace_stiffness_);
+  // ROS_WARN_STREAM_THROTTLE(0.5, "Nullspace stiffness:" << nullspace_stiffness_);
 
   Eigen::VectorXd nullspace_stiffness_vec(7);
 
   // NULLSPACE DURING EXECUTION (WORKING AT MUSEUM/PENN) <== THIS SHOULD CHANGE FOR DIFFERENT SETUPS!
-  nullspace_stiffness_vec <<  0.0001*nullspace_stiffness_, 0.1*nullspace_stiffness_, 5*nullspace_stiffness_, 0.0001*nullspace_stiffness_, 
-  0.0001*nullspace_stiffness_, 0.0001*nullspace_stiffness_, 0.0001*nullspace_stiffness_;
+  nullspace_stiffness_vec <<  10.0*nullspace_stiffness_, 0.1*nullspace_stiffness_, 15.0*nullspace_stiffness_, 0.0001*nullspace_stiffness_, 
+  1.5*nullspace_stiffness_, 0.0001*nullspace_stiffness_, 0.0001*nullspace_stiffness_;
 
     for (int i=0; i<7; i++)
       tau_nullspace_error(i) = nullspace_stiffness_vec(i) * (q_d_nullspace_(i) - q(i));
     tau_nullspace << (Eigen::MatrixXd::Identity(7, 7) -
                       jacobian.transpose() * jacobian_transpose_pinv) *
                          (tau_nullspace_error - (2.0 * sqrt(nullspace_stiffness_)) * dq);
-
+  ROS_INFO_STREAM_THROTTLE(0.5, "Nullspace torque:" << tau_nullspace.transpose());
   // Compute tool compensation (scoop/camera in scooping task)
   if (activate_tool_compensation_)
     tau_tool << jacobian.transpose() * tool_compensation_force_;

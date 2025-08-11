@@ -6,7 +6,6 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
-        - /TF1/Frames1
       Splitter Ratio: 0.5011441707611084
     Tree Height: 531
   - Class: rviz/Selection
@@ -202,12 +201,76 @@ Visualization Manager:
       Unreliable: false
       Value: true
     - Class: rviz/TF
-      Enabled: false
+      Enabled: true
       Filter (blacklist): ""
       Filter (whitelist): ""
       Frame Timeout: 15
       Frames:
         All Enabled: false
+        Cabinet:
+          Value: false
+        bottom:
+          Value: false
+        dishrack:
+          Value: false
+        franka_base:
+          Value: false
+        franka_gripper:
+          Value: true
+        lid:
+          Value: false
+        mocap_world:
+          Value: false
+        panda_EE:
+          Value: false
+        panda_K:
+          Value: false
+        panda_NE:
+          Value: false
+        panda_hand:
+          Value: false
+        panda_hand_sc:
+          Value: false
+        panda_hand_tcp:
+          Value: false
+        panda_leftfinger:
+          Value: false
+        panda_link0:
+          Value: false
+        panda_link0_sc:
+          Value: false
+        panda_link1:
+          Value: false
+        panda_link1_sc:
+          Value: false
+        panda_link2:
+          Value: false
+        panda_link2_sc:
+          Value: false
+        panda_link3:
+          Value: false
+        panda_link3_sc:
+          Value: false
+        panda_link4:
+          Value: false
+        panda_link4_sc:
+          Value: false
+        panda_link5:
+          Value: false
+        panda_link5_sc:
+          Value: false
+        panda_link6:
+          Value: false
+        panda_link6_sc:
+          Value: false
+        panda_link7:
+          Value: false
+        panda_link7_sc:
+          Value: false
+        panda_link8:
+          Value: false
+        panda_rightfinger:
+          Value: false
       Marker Alpha: 1
       Marker Scale: 0.5
       Name: TF
@@ -215,9 +278,58 @@ Visualization Manager:
       Show Axes: true
       Show Names: true
       Tree:
-        {}
+        Cabinet:
+          bottom:
+            {}
+        mocap_world:
+          dishrack:
+            {}
+          franka_base:
+            {}
+          franka_gripper:
+            {}
+          lid:
+            {}
+          panda_link0:
+            panda_link0_sc:
+              {}
+            panda_link1:
+              panda_link1_sc:
+                {}
+              panda_link2:
+                panda_link2_sc:
+                  {}
+                panda_link3:
+                  panda_link3_sc:
+                    {}
+                  panda_link4:
+                    panda_link4_sc:
+                      {}
+                    panda_link5:
+                      panda_link5_sc:
+                        {}
+                      panda_link6:
+                        panda_link6_sc:
+                          {}
+                        panda_link7:
+                          panda_link7_sc:
+                            {}
+                          panda_link8:
+                            panda_NE:
+                              panda_EE:
+                                panda_K:
+                                  {}
+                            panda_hand:
+                              panda_hand_sc:
+                                {}
+                              panda_hand_tcp:
+                                {}
+                              panda_leftfinger:
+                                {}
+                              panda_rightfinger:
+                                {}
       Update Interval: 0
-      Value: false
+      Value: true
     - Alpha: 1
       Arrow Width: 0.5
       Class: rviz/WrenchStamped
@@ -317,7 +429,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 1.4966217279434204
+      Distance: 1.0117944478988647
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -325,17 +437,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 0.05585135892033577
-        Y: -0.5543608069419861
-        Z: 0.13493622839450836
+        X: 0.27459490299224854
+        Y: -0.06255646795034409
+        Z: 0.12984395027160645
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.6553986072540283
+      Pitch: 0.47539862990379333
       Target Frame: <Fixed Frame>
-      Yaw: 5.818575859069824
+      Yaw: 0.055387891829013824
     Saved: ~
 Window Geometry:
   Displays:
@@ -354,4 +466,4 @@ Window Geometry:
     collapsed: true
   Width: 968
   X: 72
-  Y: 75
+  Y: 38

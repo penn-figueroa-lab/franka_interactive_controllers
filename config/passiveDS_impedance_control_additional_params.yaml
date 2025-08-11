@@ -23,7 +23,7 @@ cartesian_stiffness_mode: 0 # Initial fallback stiffness mode 0: grav-comp, 1: s
 # ***** Nominal nullspace stiffness used for all joints ***** #
 # nullspace_stiffness: 0.01 # TOO COMPLIANT.. ROBOT WILL GET IN WEIRD CONFIGURATION WHEN DOING GRAV COMP
 # nullspace_stiffness: 0.1 # With strong motions ROBOT WILL GET IN WEIRD CONFIGURATION WHEN DOING GRAV COMP
-nullspace_stiffness: 0.01 #Good behavior in REAL ROBOT MIT MUSEUM (This seems like the optimal stiffness)******
+nullspace_stiffness: 0.03 #Good behavior in REAL ROBOT MIT MUSEUM (This seems like the optimal stiffness)******
 # nullspace_stiffness: 0.5 #Good behavior in REAL ROBOT MIT MUSEUM (stays near nullspace while doing grav comp.. still a BIT Stiff)
 # nullspace_stiffness: 3.0 #Good behavior in REAL ROBOT MIT MUSEUM (stays near nullspace but becomes a bit stiff)
 # nullspace_stiffness: 0.01 #Good behavior in REAL ROBOT MIT MUSEUM (stays near nullspace but becomes a bit stiff)

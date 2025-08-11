@@ -9,7 +9,8 @@
   <arg name="launch_commander"    default="false" />
   <!-- Static transform from mocap world to robot base -->
   <!-- TODO: Calibrate this transform accurately! -->
-  <node pkg="tf2_ros" type="static_transform_publisher" name="static_transform_publisher_mocap_to_base" args="-2.51 0.65 0.90 0 0 0 mocap_world panda_link0" />
+  <node pkg="tf2_ros" type="static_transform_publisher" name="static_transform_publisher_mocap_to_base" args="-2.5058 1.0381 0.888 0 0 0 mocap_world panda_link0" />
+  <node pkg="tf2_ros" type="static_transform_publisher" name="static_transform_publisher_cabinet_to_surface" args="0  0  -0.45 0 0 0 Cabinet bottom" />
 
   <!-- Node to calculate and publish Twist commands based on mocap handle pose -->
   <group if="$(arg launch_commander)">

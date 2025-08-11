@@ -75,7 +75,7 @@ class FrankaStatesConverter:
         msg_o_t_ee_uni_gripper.header.frame_id = "panda_link0"
 
         ee_pos_world = np.array([O_T_EE[0, 3], O_T_EE[1, 3], O_T_EE[2, 3]])
-        ee_pos_offset = np.array([0.0, 0.0, 0.07])
+        ee_pos_offset = np.array([0.0, 0.0, 0.03-0.02])
         ee_pos_gripper = ee_pos_world + O_T_EE[:3, :3] @ ee_pos_offset
 
         # Copy position and orientation from end-effector pose

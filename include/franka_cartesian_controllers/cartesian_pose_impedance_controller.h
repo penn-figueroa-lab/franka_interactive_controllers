@@ -10,6 +10,8 @@
 #include <dynamic_reconfigure/server.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/WrenchStamped.h>
+#include <geometry_msgs/Vector3.h>
+#include <std_msgs/Float64.h>
 #include <hardware_interface/joint_command_interface.h>
 #include <hardware_interface/robot_hw.h>
 #include <ros/node_handle.h>
@@ -80,6 +82,14 @@ class CartesianPoseImpedanceController : public controller_interface::MultiInter
   // Desireds pose subscriber
   ros::Subscriber sub_desired_pose_;
   void desiredPoseCallback(const geometry_msgs::PoseStampedConstPtr& msg);
+
+  // Minimal additions: selection matrix and simple subscriber for first-axis stiffness
+  Eigen::Matrix3d basis_trans_; // columns form an orthonormal basis [v, n1, n2]
+  double k_parallel_{0.0};
+  ros::Subscriber sub_stiffness_scalar_;
+    ros::Subscriber sub_compliant_direction_;
+  void stiffnessScalarCallback(const std_msgs::Float64ConstPtr& msg);
+    void compliantDirectionCallback(const geometry_msgs::Vector3ConstPtr& msg);
 
   ros::Publisher pub_ft;
   std::array<LPF, 7> lpf;

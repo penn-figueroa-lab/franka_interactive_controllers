@@ -10,6 +10,7 @@
 #include <dynamic_reconfigure/server.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/WrenchStamped.h>
+#include <geometry_msgs/TwistStamped.h>
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/Twist.h>
 #include <std_msgs/Int32.h>
@@ -195,6 +196,7 @@ class PassiveDSImpedanceController : public controller_interface::MultiInterface
   void desiredDampingCallback(const std_msgs::Float32MultiArrayPtr& msg); // In case damping values want to be changed!
 
   ros::Publisher pub_ft;
+  ros::Publisher pub_ee_vel;
   std::array<LPF, 7> lpf;
   Eigen::Matrix<double, 7, 1> dq_prev;
 

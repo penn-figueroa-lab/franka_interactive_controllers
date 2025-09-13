@@ -103,6 +103,8 @@ bool PassiveDSImpedanceController::init(hardware_interface::RobotHW* robot_hw,
   pub_ft = node_handle.advertise<geometry_msgs::WrenchStamped>("/franka_ft", 10);
   dq_prev.setZero();
 
+  pub_ee_vel = node_handle.advertise<geometry_msgs::TwistStamped>("/franka_ee_vel", 10);
+
   // Getting ROSParams
   std::string arm_id;
   if (!node_handle.getParam("arm_id", arm_id)) {
@@ -447,6 +449,15 @@ void PassiveDSImpedanceController::update(const ros::Time& /*time*/,
   Eigen::Matrix<double, 6, 1> velocity;
   Eigen::Matrix<double, 6, 1> velocity_desired_;
   velocity << jacobian * dq;
+
+  geometry_msgs::TwistStamped ee_vel_msg;
+  ee_vel_msg.header.stamp = ros::Time::now();
+  ee_vel_msg.header.frame_id = "panda_0";
+  ee_vel_msg.twist.linear.x = velocity(0);
+  ee_vel_msg.twist.linear.y = velocity(1);
+  ee_vel_msg.twist.linear.z = velocity(2);
+  pub_ee_vel.publish(ee_vel_msg);
+
   velocity_desired_.setZero();
   velocity_desired_.head(3) << velocity_d_;
 

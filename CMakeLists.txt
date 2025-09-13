@@ -14,6 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
   franka_hw
   franka_gripper
   geometry_msgs
+  std_msgs
   hardware_interface
   tf
   tf_conversions
@@ -50,6 +51,7 @@ catkin_package(
     franka_hw
     franka_gripper
     geometry_msgs
+    std_msgs
     hardware_interface
     tf
     tf_conversions

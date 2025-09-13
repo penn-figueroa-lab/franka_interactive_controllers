@@ -27,6 +27,16 @@ bool CartesianPoseImpedanceController::init(hardware_interface::RobotHW* robot_h
       "/cartesian_impedance_controller/desired_pose", 20, &CartesianPoseImpedanceController::desiredPoseCallback, this,
       ros::TransportHints().reliable().tcpNoDelay());
 
+  // Minimal addition: subscriber for stiffness scalar (first diag term)
+  sub_stiffness_scalar_ = node_handle.subscribe(
+    "/cartesian_impedance_controller/stiffness_scalar", 10,
+    &CartesianPoseImpedanceController::stiffnessScalarCallback, this,
+    ros::TransportHints().reliable().tcpNoDelay());
+  sub_compliant_direction_ = node_handle.subscribe(
+    "/cartesian_impedance_controller/compliant_direction", 10,
+    &CartesianPoseImpedanceController::compliantDirectionCallback, this,
+    ros::TransportHints().reliable().tcpNoDelay());
+
   pub_ft = node_handle.advertise<geometry_msgs::WrenchStamped>("/franka_ft", 10);
   dq_prev.setZero();
 
@@ -112,6 +122,10 @@ bool CartesianPoseImpedanceController::init(hardware_interface::RobotHW* robot_h
   orientation_d_target_.coeffs() << 0.0, 0.0, 0.0, 1.0;
   cartesian_stiffness_.setZero();
   cartesian_damping_.setZero();
+
+  basis_trans_.setIdentity();
+  k_parallel_ = 0.0; // default compliant along first basis
+  // By default, control all axes; a compliant direction can be set via topic
 
   ///////////////////////////////////////////////////////////////////////////
   ////////////////  Parameter Initialization from YAML FILES!!!     /////////
@@ -286,7 +300,37 @@ void CartesianPoseImpedanceController::update(const ros::Time& /*time*/,
   velocity << jacobian * dq;
   Eigen::VectorXd     F_ee_des_;
   F_ee_des_.resize(6);
-  F_ee_des_ << -cartesian_stiffness_ * error - cartesian_damping_ * velocity;
+  // Build anisotropic translational gains Kt = Bt * diag(k) * Bt^T
+  // where Bt = [v n1 n2] from basis_trans_ and k = [k_parallel, k_perp1, k_perp2]
+  Eigen::Matrix3d Bt = basis_trans_;
+  // Pull current diag translational stiffness from target (x,y,z)
+  double kx = cartesian_stiffness_(0,0);
+  double ky = cartesian_stiffness_(1,1);
+  double kz = cartesian_stiffness_(2,2);
+  // Use k_parallel_ as the first basis gain if provided (>0), otherwise keep mapping of existing gains
+  double kpar = (k_parallel_ > 0.01 ? k_parallel_ : kx);
+  Eigen::Vector3d kdiag(kpar, ky, kz);
+  Eigen::Matrix3d Kt = Bt * kdiag.asDiagonal() * Bt.transpose();
+
+  // Critical damping per axis in basis, map similarly
+  double dx = cartesian_damping_(0,0);
+  double dy = cartesian_damping_(1,1);
+  double dz = cartesian_damping_(2,2);
+  // Heuristic: if k_parallel_ set, set d_parallel = 2*sqrt(k_parallel_), else keep dx
+  double dpar = (k_parallel_ > 0.01 ? 2.0 * std::sqrt(k_parallel_) : dx);
+  Eigen::Vector3d ddiag(dpar, dy, dz);
+  Eigen::Matrix3d Dt = Bt * ddiag.asDiagonal() * Bt.transpose();
+
+  // Compose 6x6 stiffness and damping with rotational parts unchanged
+  Eigen::Matrix<double,6,6> K;
+  Eigen::Matrix<double,6,6> Dm;
+  K.setZero(); Dm.setZero();
+  K.block<3,3>(0,0) = Kt;
+  K.block<3,3>(3,3) = cartesian_stiffness_.block<3,3>(3,3);
+  Dm.block<3,3>(0,0) = Dt;
+  Dm.block<3,3>(3,3) = cartesian_damping_.block<3,3>(3,3);
+
+  F_ee_des_ << - K * error - Dm * velocity;
   tau_task << jacobian.transpose() * F_ee_des_;
   ROS_WARN_STREAM_THROTTLE(0.5, "Current Velocity Norm:" << velocity.head(3).norm());
   ROS_WARN_STREAM_THROTTLE(0.5, "Classic Linear Control Force:" << F_ee_des_.head(3).norm());
@@ -373,6 +417,41 @@ void CartesianPoseImpedanceController::desiredPoseCallback(
     orientation_d_target_.coeffs() << -orientation_d_target_.coeffs();
   }
 }
+
+void CartesianPoseImpedanceController::stiffnessScalarCallback(
+    const std_msgs::Float64ConstPtr& msg) {
+  // Minimal: override first diagonal term of target stiffness and recompute first damping term
+  double k = std::max(0.0, msg->data);
+  // Interpret this as k_parallel (gain along the chosen compliant/primary basis direction)
+  k_parallel_ = k;
+  // Keep target diagonal for x updated for compatibility with any UIs
+  cartesian_stiffness_target_.diagonal()(0) = k;
+  cartesian_damping_target_.diagonal()(0) = 2.0 * std::sqrt(k > 0.0 ? k : default_cart_stiffness_target_(0));
+}
+
+void CartesianPoseImpedanceController::compliantDirectionCallback(
+    const geometry_msgs::Vector3ConstPtr& msg) {
+  // Set translational compliant direction to the provided unit vector; leave rotation controlled
+  Eigen::Vector3d v(msg->x, msg->y, msg->z);
+  double n = v.norm();
+  if (n < 1e-6) {
+    // If zero vector, revert to controlling all axes
+
+    basis_trans_.setIdentity();
+    return;
+  }
+  v /= n;
+  // Orthonormal basis: e1 = v, e2, e3 via Gram-Schmidt from world axes
+  Eigen::Vector3d a = (std::abs(v.x()) < 0.9) ? Eigen::Vector3d::UnitX() : Eigen::Vector3d::UnitY();
+  Eigen::Vector3d e2 = (a - v * (a.dot(v))).normalized();
+  if (!std::isfinite(e2.norm())) e2 = Eigen::Vector3d::UnitZ();
+  Eigen::Vector3d e3 = v.cross(e2).normalized();
+  basis_trans_.col(0) = v;
+  basis_trans_.col(1) = e2;
+  basis_trans_.col(2) = e3;
+
+}
+
 
 }  // namespace franka_interactive_controllers
 

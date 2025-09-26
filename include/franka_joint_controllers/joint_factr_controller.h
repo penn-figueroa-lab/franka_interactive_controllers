@@ -25,6 +25,15 @@
 #include <std_msgs/Float32MultiArray.h>
 #include <std_msgs/String.h>
 
+#include <actionlib/client/simple_action_client.h>
+#include <franka_gripper/GraspAction.h>
+#include <franka_gripper/MoveAction.h>
+#include <franka_gripper/HomingAction.h>
+#include <franka_gripper/StopAction.h>
+#include <franka/robot_state.h>
+#include <pluginlib/class_list_macros.h>
+#include <pseudo_inversion.h>
+
 namespace franka_interactive_controllers {
 
 class LPF{
@@ -75,15 +84,19 @@ class JointFactrController : public controller_interface::MultiInterfaceControll
   void gravitycompensationParamCallback(franka_interactive_controllers::gravity_compensation_paramConfig& config,
                                uint32_t level);
   void controller_callback(const std_msgs::Float32MultiArray::ConstPtr& msg);
+  void gripper_callback(const std_msgs::Float32MultiArray::ConstPtr& msg);
 
   ros::Publisher pub_state;
   ros::Publisher pub_trq;
   ros::Publisher pub_ft;
   ros::Subscriber sub_control_signal;
+  ros::Subscriber sub_gripper_signal;
   Eigen::VectorXd q_desired;
 
   bool received_command;
 
+  std::unique_ptr<actionlib::SimpleActionClient<franka_gripper::MoveAction>> gripper_ac_;
+  std::unique_ptr<actionlib::SimpleActionClient<franka_gripper::GraspAction>> gripper_grasp_ac_;
 
   std::array<LPF, 7> lpf;
   Eigen::Matrix<double, 7, 1> dq_prev;

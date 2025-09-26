@@ -6,7 +6,6 @@
 #include <joint_factr_controller.h>
 
 #include <cmath>
-#include <memory>
 
 #include <controller_interface/controller_base.h>
 #include <franka/robot_state.h>
@@ -24,13 +23,24 @@ namespace franka_interactive_controllers {
 bool JointFactrController::init(hardware_interface::RobotHW* robot_hw,
                                                ros::NodeHandle& node_handle) {
 
-  sub_control_signal = node_handle.subscribe("/joint_factr_controller/desired_joint_pos", 1000, &JointFactrController::controller_callback, this,
+  sub_control_signal = node_handle.subscribe("joint_factr_controller/desired_joint_pos", 1000, &JointFactrController::controller_callback, this,
       ros::TransportHints().reliable().tcpNoDelay());
 
-  pub_ft = node_handle.advertise<geometry_msgs::WrenchStamped>("/franka_ft", 10);
+  sub_gripper_signal = node_handle.subscribe("joint_factr_controller/desired_gripper_pos", 1000, &JointFactrController::gripper_callback, this,
+      ros::TransportHints().reliable().tcpNoDelay());
+
+  gripper_ac_ = std::make_unique<actionlib::SimpleActionClient<franka_gripper::MoveAction>>("franka_gripper/move", true);
+  gripper_ac_->waitForServer();
+  ROS_INFO("Connected to gripper move action server.");
+
+  gripper_grasp_ac_ = std::make_unique<actionlib::SimpleActionClient<franka_gripper::GraspAction>>("franka_gripper/grasp", true);
+  gripper_grasp_ac_->waitForServer();
+  ROS_INFO("Connected to gripper grasp action server.");
+
+  pub_ft = node_handle.advertise<geometry_msgs::WrenchStamped>("franka_ft", 10);
   dq_prev.setZero();
 
-  pub_trq = node_handle.advertise<std_msgs::Float32MultiArray>("/joint_factr_controller/external_torque", 10);
+  pub_trq = node_handle.advertise<std_msgs::Float32MultiArray>("joint_factr_controller/external_torque", 10);
 
   // Getting ROSParams
   std::string arm_id;
@@ -133,6 +143,7 @@ bool JointFactrController::init(hardware_interface::RobotHW* robot_hw,
 
 
   q_desired = Eigen::VectorXd::Zero(7);
+  q_desired << 0.0, -0.7854, 0.0, -2.356, 0.0, 1.57, 0.0;
   received_command = false;
 
 
@@ -149,7 +160,7 @@ void JointFactrController::starting(const ros::Time& /*time*/) {
       model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
 
 
-  std::array<double, 7> q_start{{0, -M_PI_4, 0, -3 * M_PI_4, 0, M_PI_2, M_PI_4}};
+  std::array<double, 7> q_start{{0.0, -0.7854, 0.0, -2.356, 0.0, 1.57, 0.0}};
   for (size_t i = 0; i < q_start.size(); i++) {
     if (std::abs(q_initial[i] - q_start[i]) > 0.1) {
       ROS_ERROR_STREAM(
@@ -180,7 +191,7 @@ void JointFactrController::update(const ros::Time& /*time*/,
       robot_state.tau_J_d.data());
   Eigen::Map<Eigen::Matrix<double, 4,4>> end_T(robot_state.O_T_EE.data());
   Eigen::Map<Eigen::Matrix<double, 7, 1>> tau_est(robot_state.tau_ext_hat_filtered.data());
-
+  // std::cout << "I am re" << std::endl;
   
   Eigen::VectorXd tau_dyn(7), tau_contact(7), wrench_contact_K(6), dq_filt(7), ddq(7);
   for (auto i=0; i< 7; i++){
@@ -219,7 +230,7 @@ void JointFactrController::update(const ros::Time& /*time*/,
   Eigen::VectorXd tau_d(7), tau_task(7), tau_nullspace(7), tau_tool(7);
   Eigen::Matrix<double, 7, 1> K;
   Eigen::Matrix<double, 7, 1> D;
-  K << 70, 70, 70, 70, 70, 70, 70;
+  K << 100, 100, 100, 100, 100, 100, 100;
   D << 50, 50, 50, 25, 15, 10, 5; 
 
   // // pseudoinverse for nullspace handling kinematic pseudoinverse
@@ -239,11 +250,11 @@ void JointFactrController::update(const ros::Time& /*time*/,
   dq_desired.setZero();
 
   double max_allowed_error = 0.3; // radians, adjust as needed
-
+  // std::cout << "desired pos " << q_desired << std::endl;
   Eigen::Matrix<double, 7, 1> position_error = q_desired - q;
 
   if (!received_command) {
-    std::cout << "No command" << std::endl;
+    // std::cout << "No command" << std::endl;
     tau_d.setZero();
   }else if (position_error.cwiseAbs().maxCoeff() > max_allowed_error){
     std::cout << "Exceeding max error: "<<  position_error << std::endl;
@@ -256,7 +267,7 @@ void JointFactrController::update(const ros::Time& /*time*/,
 
   // Alternative 
   // tau_d.setZero();
-  //std::cout << "send torque" << std::endl;
+  // std::cout << "send torque " << tau_d << std::endl;
 
   // Saturate torque rate to avoid discontinuities
   tau_d << saturateTorqueRate(tau_d, tau_J_d);
@@ -310,6 +321,51 @@ void JointFactrController::controller_callback(const std_msgs::Float32MultiArray
   received_command = true;
 }
 
+void JointFactrController::gripper_callback(const std_msgs::Float32MultiArray::ConstPtr& msg)
+{
+  if (msg->data.empty()) {
+    ROS_WARN("Gripper command received with no data.");
+    return;
+  }
+
+  // msg->data[0] is width, msg->data[1] is speed, msg->data[2] is force (for grasp)
+  if (msg->data.size() >= 3) {
+    // Grasp Action
+    franka_gripper::GraspGoal goal;
+    double width = msg->data[0];
+    double speed = msg->data[1];
+    double force = msg->data[2];
+
+    if (width >= 0.0 && width <= 0.08) {
+      goal.width = width;
+      goal.speed = speed;
+      goal.force = force;
+      goal.epsilon.inner = 0.05; // default values
+      goal.epsilon.outer = 0.05; // default values
+      gripper_grasp_ac_->sendGoal(goal);
+      ROS_INFO("Gripper grasp command sent with width: %f, speed: %f, and force: %f", width, speed, force);
+    } else {
+      ROS_WARN("Gripper command width %f is out of range [0.0, 0.08].", width);
+    }
+  } else if (msg->data.size() >= 2) {
+    // Move Action
+    franka_gripper::MoveGoal goal;
+    double width = msg->data[0];
+    double speed = msg->data[1];
+    
+    // The gripper width is between 0.0 and 0.08.
+    if (width >= 0.0 && width <= 0.08) {
+      goal.width = width;
+      goal.speed = speed;
+      gripper_ac_->sendGoal(goal);
+      ROS_INFO("Gripper move command sent with width: %f and speed: %f", width, speed);
+    } else {
+      ROS_WARN("Gripper command width %f is out of range [0.0, 0.08].", width);
+    }
+  } else {
+      ROS_WARN("Gripper command requires at least 2 data points (width, speed).");
+  }
+}
 
 }  // namespace franka_interactive_controllers
 

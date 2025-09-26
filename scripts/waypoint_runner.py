@@ -91,16 +91,16 @@ class WaypointRunner:
 
 
         # publishers
-        self.pose_pub    = rospy.Publisher("/cartesian_impedance_controller/desired_pose",
+        self.pose_pub    = rospy.Publisher("/franka_right/cartesian_impedance_controller/desired_pose",
                                            PoseStamped,
                                            queue_size=10)
         if self.enable_gripper:
-            self.grip_pub = rospy.Publisher("/target_gripper",
+            self.grip_pub = rospy.Publisher("/franka_right/target_gripper",
                                             Int32,
                                             queue_size=10)
 
         # subscribers
-        self.pose_sub = rospy.Subscriber("/franka_state_controller/O_T_EE",
+        self.pose_sub = rospy.Subscriber("/franka_right/franka_state_controller/O_T_EE",
                                          PoseStamped,
                                          self.pose_callback,
                                          queue_size=1)
@@ -132,11 +132,8 @@ class WaypointRunner:
         if not self.enable_orn:
             return positions
 
-        # orientations – SLERP on Euler‑converted quaternions
-        start_eul, end_eul = start[3:6], end[3:6]
-        key_rots = Rotation.from_euler('xyz', np.vstack([start_eul, end_eul]))
-        slerp    = Slerp([0, 1], key_rots)
-        interp_eul = slerp(t).as_euler('xyz')
+        # orientations – no interpolation; keep start orientation for whole segment
+        interp_eul = np.tile(end[3:6], (self.num_interp_pts, 1))
         return np.hstack([positions, interp_eul])
 
     # ───────────────────────── publishing loop ────────────────────────

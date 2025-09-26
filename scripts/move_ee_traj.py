@@ -145,13 +145,13 @@ class GFabricVelNode:
 
         # Franka state
         self.current_pos, self.current_rot = None, None
-        rospy.Subscriber('/franka_state_controller/franka_states',
+        rospy.Subscriber('/franka_right/franka_state_controller/franka_states',
                          FrankaState, self._state_cb, queue_size=1)
 
         # command publishers
-        self.pose_pub = rospy.Publisher('/passiveDS/desired_lin_and_ori',
+        self.pose_pub = rospy.Publisher('/franka_right/passiveDS/desired_lin_and_ori',
                                         Pose, queue_size=1)
-        self.damping_pub = rospy.Publisher('/passiveDS/desired_damp_eigval',
+        self.damping_pub = rospy.Publisher('/franka_right/passiveDS/desired_damp_eigval',
                                            Float32MultiArray, queue_size=1)
 
         rospy.loginfo("Waiting for FrankaState …")

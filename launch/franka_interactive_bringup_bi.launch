@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
 <launch>
   <arg name="robot_ip"            default="172.16.0.2"/>
-  <arg name="load_gripper"        default="false" />
+  <arg name="load_gripper"        default="true" />
   <arg name="use_gripper_gui"     default="true" />
   <arg name="controller"          default="passiveDS_impedance"   doc="Which controller should be started? (One of {cartesian_pose, cartesian_twist, passiveDS}_impedance_controller )" />
   <arg name="bringup_rviz"        default="true" />
@@ -9,64 +9,65 @@
   <arg name="load_qp"             default="false" />
   <arg name="oculus"              default="false"  />
   <arg name="move_test"           default="false"  />
+  <arg name="left_or_right"       default="left" doc="left and right are determined by you"/>
 
 
 
   <!-- Bringup franka_interactive_bringup.launch and gravity compensation controller!-->
-  <group ns="franka_right">
-    <group if="$(arg load_franka_control)">
-      <!-- Loads robot control interface -->
-      <include file="$(find franka_interactive_controllers)/launch/franka_control_interactive.launch" >
-        <arg name="robot_ip" value="$(arg robot_ip)" />
-        <arg name="load_gripper" value="$(arg load_gripper)" />
-      </include>
+  <group ns="franka_$(arg left_or_right)">
+      <group if="$(arg load_franka_control)">
+        <!-- Loads robot control interface -->
+        <include file="$(find franka_interactive_controllers)/launch/franka_control_interactive.launch" >
+          <arg name="robot_ip" value="$(arg robot_ip)" />
+          <arg name="load_gripper" value="$(arg load_gripper)" />
+        </include>
 
-      <!-- Start only if cartesian_pose_impedance_controller is set in "controller"-->
-      <include file="$(find franka_interactive_controllers)/launch/cartesian_pose_impedance_controller.launch" 
-        if="$(eval arg('controller') == 'cartesian_pose_impedance')">
-      </include>
+        <!-- Start only if cartesian_pose_impedance_controller is set in "controller"-->
+        <include file="$(find franka_interactive_controllers)/launch/cartesian_pose_impedance_controller.launch" 
+          if="$(eval arg('controller') == 'cartesian_pose_impedance')">
+        </include>
 
-      <!-- Start only if cartesian_twist_impedance_controller is set in "controller"-->
-      <include file="$(find franka_interactive_controllers)/launch/cartesian_twist_impedance_controller.launch" if="$(eval arg('controller') == 'cartesian_twist_impedance')">
-      </include>
+        <!-- Start only if cartesian_twist_impedance_controller is set in "controller"-->
+        <include file="$(find franka_interactive_controllers)/launch/cartesian_twist_impedance_controller.launch" if="$(eval arg('controller') == 'cartesian_twist_impedance')">
+        </include>
 
-      <!-- Start only if passive_ds_impedance_controller is set in "controller"-->
-      <include file="$(find franka_interactive_controllers)/launch/passiveDS_impedance_controller.launch" if="$(eval arg('controller') == 'passiveDS_impedance')">
-        <arg name="params_yaml_file" value="$(find franka_interactive_controllers)/config/passiveDS_impedance_control_additional_params.yaml"/>
-      </include>
+        <!-- Start only if passive_ds_impedance_controller is set in "controller"-->
+        <include file="$(find franka_interactive_controllers)/launch/passiveDS_impedance_controller.launch" if="$(eval arg('controller') == 'passiveDS_impedance')">
+          <arg name="params_yaml_file" value="$(find franka_interactive_controllers)/config/passiveDS_impedance_control_additional_params.yaml"/>
+        </include>
 
-      <include file="$(find franka_interactive_controllers)/launch/joint_gravity_compensation_controller.launch" if="$(eval arg('controller') == 'gravity_compensation')">
-      </include>
+        <include file="$(find franka_interactive_controllers)/launch/joint_gravity_compensation_controller.launch" if="$(eval arg('controller') == 'gravity_compensation')">
+        </include>
 
-      <include file="$(find franka_interactive_controllers)/launch/joint_factr_controller.launch" if="$(eval arg('controller') == 'factr')">
-      </include>
-    </group>
+        <include file="$(find franka_interactive_controllers)/launch/joint_factr_controller.launch" if="$(eval arg('controller') == 'factr')">
+        </include>
+      </group>
 
 
 
-    <group if="$(arg bringup_rviz)">
-      <!-- Convert franka state of EE to Geometry Message PoseStamped!! -->  
-      <node name="franka_to_geometry_messages" pkg="franka_interactive_controllers" type="franka_to_geometry_messages.py" respawn="false" output="screen"/>
+      <group if="$(arg bringup_rviz)">
+        <!-- Convert franka state of EE to Geometry Message PoseStamped!! -->  
+        <node name="franka_to_geometry_messages" pkg="franka_interactive_controllers" type="franka_to_geometry_messages.py" respawn="false" output="screen"/>
 
-      <!-- Bring up rqt_reconfigure to modify values -->
-      <node name="rqt_reconfigure" pkg="rqt_reconfigure" type="rqt_reconfigure" required="false" />
+        <!-- Bring up rqt_reconfigure to modify values -->
+        <node name="rqt_reconfigure" pkg="rqt_reconfigure" type="rqt_reconfigure" required="false" />
 
-      <!-- Bring up gripper GUI to control gripper from code -->  
-      <node if="$(arg use_gripper_gui)" name="franka_gui_gripper_run" pkg="franka_interactive_controllers" type="franka_gui_gripper_run.py" respawn="false" output="screen"/>
+        <!-- Bring up gripper GUI to control gripper from code -->  
+        <node if="$(arg use_gripper_gui)" name="franka_gui_gripper_run" pkg="franka_interactive_controllers" type="franka_gui_gripper_run.py" respawn="false" output="screen"/>
 
-      <!-- Bring up rviz configuration -->
-      <node  pkg="rviz" type="rviz" output="screen" name="rviz" args="-d $(find franka_interactive_controllers)/launch/rviz/franka_description.rviz" if="$(arg bringup_rviz)"/>
-    </group>
+        <!-- Bring up rviz configuration -->
+        <node  pkg="rviz" type="rviz" output="screen" name="rviz" args="-d $(find franka_interactive_controllers)/launch/rviz/franka_description_bi_$(arg left_or_right).rviz" if="$(arg bringup_rviz)"/>
+      </group>
 
-    <include file="$(find constr_passive)/launch/control_pose.launch" if="$(arg load_qp)"></include>
+      <include file="$(find constr_passive)/launch/control_pose.launch" if="$(arg load_qp)"></include>
 
-    <group if="$(arg oculus)">
-      <node name="oculus_cartesian_teleop" pkg="franka_interactive_controllers" type="oculus_teleop.py" respawn="false" output="screen"/>
-    </group>
+      <group if="$(arg oculus)">
+        <node name="oculus_cartesian_teleop" pkg="franka_interactive_controllers" type="oculus_teleop.py" respawn="false" output="screen"/>
+      </group>
 
-    <!-- <group if="$(arg move_test)">
-      <node name="move_test" pkg="franka_interactive_controllers" type="move_test.py" respawn="false" output="screen"/>
-    </group> -->
+      <!-- <group if="$(arg move_test)">
+        <node name="move_ee_traj" pkg="franka_interactive_controllers" type="move_ee_traj.py" respawn="false" output="screen"/>
+      </group> -->
 
     </group>
 

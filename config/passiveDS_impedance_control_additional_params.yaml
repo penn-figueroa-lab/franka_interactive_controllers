@@ -22,7 +22,7 @@ cartesian_stiffness_mode: 0 # Initial fallback stiffness mode 0: grav-comp, 1: s
 # ***** Nominal nullspace stiffness used for all joints ***** #
 # nullspace_stiffness: 0.01 # TOO COMPLIANT.. ROBOT WILL GET IN WEIRD CONFIGURATION WHEN DOING GRAV COMP
 # nullspace_stiffness: 0.1 # With strong motions ROBOT WILL GET IN WEIRD CONFIGURATION WHEN DOING GRAV COMP
-nullspace_stiffness: 0.25 #Good behavior in REAL ROBOT MIT MUSEUM (This seems like the optimal stiffness)******
+nullspace_stiffness: 0.2 #Good behavior in REAL ROBOT MIT MUSEUM (This seems like the optimal stiffness)******
 # nullspace_stiffness: 0.5 #Good behavior in REAL ROBOT MIT MUSEUM (stays near nullspace while doing grav comp.. still a BIT Stiff)
 # nullspace_stiffness: 1.0 #Good behavior in REAL ROBOT MIT MUSEUM (stays near nullspace but becomes a bit stiff)
 
@@ -30,7 +30,7 @@ nullspace_stiffness: 0.25 #Good behavior in REAL ROBOT MIT MUSEUM (This seems li
 # q_nullspace: [0.0, -0.1516284550464292, 0.0, -2.1602991589328693, 0.0063609233109487425, 2.030401506252017, 0.8428664707532099]
 
 # AT MIT MUSEUM
-q_nullspace: [0.005264432735087578, -0.17525178575515743, 0.08762187454773385, -1.8310899806440901, 0.029428643955124744, 1.680440888034793, 0.9123517645864205]
+q_nullspace: [-0.1512160898886229, 0.6541085653703878, -0.3080403875760865, -1.9674574759968537, -1.839791758985071, 2.037751058351662, 0.45006587260965847]
 
 # ***** F_ext wrench to compensate for camera or tool mounted on end-effector ***** #
 external_tool_compensation: [0, 0, 0.0, 0, 0.0, 0.0] #Check F_ext

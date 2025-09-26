@@ -24,20 +24,20 @@ bool CartesianPoseImpedanceController::init(hardware_interface::RobotHW* robot_h
   std::vector<double> cartesian_damping_vector;
 
   sub_desired_pose_ = node_handle.subscribe(
-      "/cartesian_impedance_controller/desired_pose", 20, &CartesianPoseImpedanceController::desiredPoseCallback, this,
+      "cartesian_impedance_controller/desired_pose", 20, &CartesianPoseImpedanceController::desiredPoseCallback, this,
       ros::TransportHints().reliable().tcpNoDelay());
 
   // Minimal addition: subscriber for stiffness scalar (first diag term)
   sub_stiffness_scalar_ = node_handle.subscribe(
-    "/cartesian_impedance_controller/stiffness_scalar", 10,
+    "cartesian_impedance_controller/stiffness_scalar", 10,
     &CartesianPoseImpedanceController::stiffnessScalarCallback, this,
     ros::TransportHints().reliable().tcpNoDelay());
   sub_compliant_direction_ = node_handle.subscribe(
-    "/cartesian_impedance_controller/compliant_direction", 10,
+    "cartesian_impedance_controller/compliant_direction", 10,
     &CartesianPoseImpedanceController::compliantDirectionCallback, this,
     ros::TransportHints().reliable().tcpNoDelay());
 
-  pub_ft = node_handle.advertise<geometry_msgs::WrenchStamped>("/franka_ft", 10);
+  pub_ft = node_handle.advertise<geometry_msgs::WrenchStamped>("franka_ft", 10);
   dq_prev.setZero();
 
   // Getting ROSParams
@@ -331,6 +331,14 @@ void CartesianPoseImpedanceController::update(const ros::Time& /*time*/,
   Dm.block<3,3>(3,3) = cartesian_damping_.block<3,3>(3,3);
 
   F_ee_des_ << - K * error - Dm * velocity;
+
+  // Limit the force in orientation
+  double angular_force_norm = F_ee_des_.tail(3).norm();
+  double max_angular_force = 4.0; // Example value, you can tune this
+  if (angular_force_norm > max_angular_force) {
+    F_ee_des_.tail(3) = F_ee_des_.tail(3) * max_angular_force / angular_force_norm;
+  }
+
   tau_task << jacobian.transpose() * F_ee_des_;
   ROS_WARN_STREAM_THROTTLE(0.5, "Current Velocity Norm:" << velocity.head(3).norm());
   ROS_WARN_STREAM_THROTTLE(0.5, "Classic Linear Control Force:" << F_ee_des_.head(3).norm());

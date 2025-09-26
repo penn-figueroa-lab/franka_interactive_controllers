@@ -93,17 +93,17 @@ bool PassiveDSImpedanceController::init(hardware_interface::RobotHW* robot_hw,
 
   // *********  Subscribers   ********* //
   sub_desired_twist_ = node_handle.subscribe(
-      "/passiveDS/desired_lin_and_ori", 20, &PassiveDSImpedanceController::desiredTwistCallback, this,
+      "passiveDS/desired_lin_and_ori", 20, &PassiveDSImpedanceController::desiredTwistCallback, this,
       ros::TransportHints().reliable().tcpNoDelay());
 
   sub_desired_damping_  = node_handle.subscribe(
-      "/passiveDS/desired_damp_eigval", 1000, &PassiveDSImpedanceController::desiredDampingCallback, this,
+      "passiveDS/desired_damp_eigval", 1000, &PassiveDSImpedanceController::desiredDampingCallback, this,
       ros::TransportHints().reliable().tcpNoDelay());
 
-  pub_ft = node_handle.advertise<geometry_msgs::WrenchStamped>("/franka_ft", 10);
+  pub_ft = node_handle.advertise<geometry_msgs::WrenchStamped>("franka_ft", 10);
   dq_prev.setZero();
 
-  pub_ee_vel = node_handle.advertise<geometry_msgs::TwistStamped>("/franka_ee_vel", 10);
+  pub_ee_vel = node_handle.advertise<geometry_msgs::TwistStamped>("franka_ee_vel", 10);
 
   // Getting ROSParams
   std::string arm_id;
